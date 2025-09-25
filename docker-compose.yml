@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    image: trip-planner-app
+    container_name: trip-planner-app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src:ro
+    command: ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  tests:
+    build: .
+    image: trip-planner-tests
+    container_name: trip-planner-tests
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./vendor:/app/vendor:ro
+    command: ["pytest", "tests/test_workflow_nodes.py"]
