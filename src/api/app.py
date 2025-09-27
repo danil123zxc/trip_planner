@@ -2,21 +2,23 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Literal, Mapping, Optional, Tuple
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
-from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_xai import ChatXAI
 from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.runtime import Runtime
+from langgraph.types import Command
 from pydantic import BaseModel, Field
 
 from src.core.config import ApiSettings
 from src.core.domain import (
     ActivitiesAgentOutput,
     BudgetEstimate,
+    CandidateResearch,
     Context,
     FinalPlan,
     FoodAgentOutput,
@@ -44,54 +46,102 @@ REQUIRED_SETTINGS = [
     "amadeus_api_secret",
 ]
 
+DEFAULT_RECURSION_LIMIT = int(os.getenv("GRAPH_RECURSION_LIMIT", "100"))
+
 
 class PlanRequest(BaseModel):
-    """API payload describing the trip context and optional user prompt."""
+    """Request payload used to start a new planning run."""
 
-    context: Context = Field(..., description="Structured trip configuration")
-    user_prompt: Optional[str] = Field(
-        default=None,
-        description="Optional free-form instructions added as the first message",
-    )
+    context: Context = Field(..., description="Structured trip configuration containing destination, dates, and travellers")
     thread_id: Optional[str] = Field(
         default=None,
-        description="Optional thread identifier to keep graph state grouped",
+        description="Existing planning thread identifier. If omitted a new thread is created.",
+    )
+    user_prompt: Optional[str] = Field(
+        default=None,
+        description="Optional free-form instructions injected as the first human message.",
     )
 
 
-class PlanResponse(BaseModel):
-    """Response containing the generated plan and supporting metadata."""
+class ResumeSelections(BaseModel):
+    """Indices of options chosen during human-in-the-loop review."""
 
-    thread_id: str
-    status: str
-    final_plan: Optional[FinalPlan] = None
-    next_research_plan: Optional[ResearchPlan] = None
-    messages: List[str] = Field(default_factory=list)
-
-
-class InterruptResponse(BaseModel):
-    """Response when workflow reaches an interrupt point requiring human input."""
-    
-    thread_id: str
-    status: str = "interrupt"
-    estimated_budget: Optional[BudgetEstimate] = None
-    research_plan: Optional[ResearchPlan] = None
-    lodging: Optional[LodgingAgentOutput] = None
-    activities: Optional[ActivitiesAgentOutput] = None
-    food: Optional[FoodAgentOutput] = None
-    intercity_transport: Optional[IntercityTransportAgentOutput] = None
-    recommendations: Optional[RecommendationsOutput] = None
-    interrupt_data: Optional[Dict[str, Any]] = None
-    messages: List[str] = Field(default_factory=list)
+    lodging: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Index of the selected lodging option (0-based).",
+    )
+    intercity_transport: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Index of the selected intercity transport option (0-based).",
+    )
+    activities: Optional[List[int]] = Field(
+        default=None,
+        description="Indices of activity options to keep. Empty list means keep all.",
+    )
+    food: Optional[List[int]] = Field(
+        default=None,
+        description="Indices of food options to keep. Empty list means keep all.",
+    )
 
 
 class ResumeRequest(BaseModel):
-    """Request to resume workflow after human review."""
-    
-    thread_id: str = Field(description="Thread ID from the interrupt response")
-    human_selections: Dict[str, int] = Field(
-        description="Human selections mapping task type to option index",
-        example={"lodging": 0, "intercity_transport": 1}
+    """Request payload used to resume the graph after an interrupt."""
+
+    config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="LangGraph configuration object returned by the interrupt response.",
+    )
+    selections: ResumeSelections = Field(
+        default_factory=ResumeSelections,
+        description="Indices indicating which options the user selected.",
+    )
+    research_plan: Optional[Dict[str, CandidateResearch]] = Field(
+        default=None,
+        description="Optional overrides for the next research plan. Keys align with CandidateResearch fields.",
+    )
+
+
+class PlanningResponse(BaseModel):
+    """Unified response returned by both the start and resume endpoints."""
+
+    thread_id: str = Field(..., description="Unique identifier for the planning session")
+    status: Literal["interrupt", "complete", "needs_follow_up", "no_plan"] = Field(
+        ..., description="Current workflow status"
+    )
+    config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Configuration needed to resume when status is 'interrupt'"
+    )
+    estimated_budget: Optional[BudgetEstimate] = Field(
+        default=None, description="Latest budget estimate produced by the workflow"
+    )
+    research_plan: Optional[ResearchPlan] = Field(
+        default=None, description="Latest research plan produced by the workflow"
+    )
+    lodging: Optional[LodgingAgentOutput] = Field(
+        default=None, description="Candidate lodging options surfaced by the agent"
+    )
+    activities: Optional[ActivitiesAgentOutput] = Field(
+        default=None, description="Candidate activities surfaced by the agent"
+    )
+    food: Optional[FoodAgentOutput] = Field(
+        default=None, description="Candidate food options surfaced by the agent"
+    )
+    intercity_transport: Optional[IntercityTransportAgentOutput] = Field(
+        default=None, description="Candidate intercity transport options surfaced by the agent"
+    )
+    recommendations: Optional[RecommendationsOutput] = Field(
+        default=None, description="General travel recommendations"
+    )
+    final_plan: Optional[FinalPlan] = Field(
+        default=None, description="Completed travel plan when the workflow finishes"
+    )
+    interrupt: Optional[Dict[str, Any]] = Field(
+        default=None, description="Raw interrupt payload containing pending human tasks"
+    )
+    messages: List[str] = Field(
+        default_factory=list, description="Workflow execution log rendered as plain strings"
     )
 
 
@@ -103,20 +153,21 @@ def _ensure_configuration(settings: ApiSettings) -> None:
             "Missing required environment variables for planner workflow: " f"{joined}"
         )
 
+
 class WorkflowBundle:
-    """Container that wires together tools, agents, and the LangGraph workflow."""
+    """Container that wires tools, agents, graph, and shared state together."""
 
     def __init__(self, settings: ApiSettings) -> None:
         _ensure_configuration(settings)
         settings.apply_langsmith_tracing()
 
         self.settings = settings
+        self.recursion_limit = DEFAULT_RECURSION_LIMIT
 
-        model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-        self.llm = ChatOpenAI(
-            model=model_name,
+        self.llm = ChatXAI(
+            model="GROK_4_FAST_REASONING",
             temperature=0,
-            api_key=settings.ensure("openai_api_key"),
+            api_key=settings.ensure("xai_api_key"),
         )
 
         self.retrieval_pipeline = self._build_retrieval_pipeline()
@@ -147,29 +198,208 @@ class WorkflowBundle:
             memory=InMemorySaver(),
         )
 
+        self._contexts: Dict[str, Context] = {}
+        self._configs: Dict[str, Dict[str, Any]] = {}
+        self._pending_states: Dict[str, Mapping[str, Any]] = {}
+        self._pending_interrupts: Dict[str, Dict[str, Any]] = {}
+
     def _build_retrieval_pipeline(self) -> RetrievalPipeline:
         config = RetrievalConfig(openai_api_key=self.settings.ensure("openai_api_key"))
         return create_default_pipeline(config)
+
+    def _make_config(self, thread_id: str) -> Dict[str, Any]:
+        return {
+            "recursion_limit": self.recursion_limit,
+            "configurable": {"thread_id": thread_id},
+        }
+
+    def _store_result(self, thread_id: str, result: Mapping[str, Any]) -> None:
+        self._pending_states[thread_id] = result
+        raw_interrupt = result.get("__interrupt__")
+        if raw_interrupt:
+            first = raw_interrupt[0]
+            payload = getattr(first, "value", first)
+            if isinstance(payload, Mapping):
+                self._pending_interrupts[thread_id] = dict(payload)
+        else:
+            self._pending_interrupts.pop(thread_id, None)
+
+    def _build_resume_payload(
+        self,
+        *,
+        thread_id: str,
+        selections: ResumeSelections,
+        research_plan: Optional[Dict[str, CandidateResearch]],
+    ) -> Dict[str, Any]:
+        state = self._pending_states.get(thread_id)
+        if state is None:
+            raise RuntimeError(f"No pending state for thread '{thread_id}' to resume.")
+
+        payload: Dict[str, Any] = {}
+        if research_plan:
+            payload["research_plan"] = {
+                key: value.model_dump(exclude_none=True)
+                for key, value in research_plan.items()
+            }
+
+        def resolve_options(key: str, attr: str) -> List[Any]:  # type: ignore[return-type]
+            output = state.get(key)
+            if output is None:
+                return []
+            options = getattr(output, attr, None)
+            return list(options or [])
+
+        single_map = {
+            "lodging": ("lodging", selections.lodging),
+            "intercity_transport": ("transport", selections.intercity_transport),
+        }
+        for key, (attr, index) in single_map.items():
+            if index is None:
+                continue
+            options = resolve_options(key, attr)
+            if not options:
+                raise RuntimeError(f"No options stored for '{key}' to select from.")
+            if index < 0 or index >= len(options):
+                raise RuntimeError(f"Selection index {index} is out of range for '{key}'.")
+            payload[key] = options[index].model_dump(exclude_none=True)
+
+        multi_map = {
+            "activities": ("activities", selections.activities),
+            "food": ("food", selections.food),
+        }
+        for key, (attr, indices) in multi_map.items():
+            if indices is None:
+                continue
+            options = resolve_options(key, attr)
+            if not options:
+                raise RuntimeError(f"No options stored for '{key}' to select from.")
+            if indices:
+                selected = []
+                for idx in indices:
+                    if idx < 0 or idx >= len(options):
+                        raise RuntimeError(
+                            f"Selection index {idx} is out of range for '{key}'."
+                        )
+                    selected.append(options[idx])
+            else:
+                selected = options
+            dumps = [item.model_dump(exclude_none=True) for item in selected]
+            payload[key] = dumps[0] if len(dumps) == 1 else dumps
+
+        return payload
 
     async def close(self) -> None:
         await self.trip_client.aclose()
 
     async def plan_trip(
         self,
+        *,
         context: Context,
-        user_prompt: Optional[str],
-        thread_id: Optional[str],
-    ) -> Tuple[str, State]:
-        active_thread = thread_id or f"trip_{uuid4()}"
-        messages = [HumanMessage(content=user_prompt)] if user_prompt else []
-        state = State(messages=messages)
+    ) -> Tuple[str, Dict[str, Any], Mapping[str, Any]]:
+        active_thread = f"trip_{uuid4()}"
+        config = self._configs.get(active_thread) or self._make_config(active_thread)
 
-        result_state = await self.graph.ainvoke(
-            state,
+        self._contexts[active_thread] = context
+        self._configs[active_thread] = config
+
+        messages = []
+        initial_state = State(messages=messages)
+
+        result = await self.graph.ainvoke(
+            initial_state,
             context=context,
-            config={"configurable": {"thread_id": active_thread}},
+            config=config,
         )
-        return active_thread, result_state
+        self._store_result(active_thread, result)
+        return active_thread, config, result
+
+    async def resume_trip(
+        self,
+        *,
+        thread_id: str,
+        config: Optional[Dict[str, Any]],
+        selections: ResumeSelections,
+        research_plan: Optional[Dict[str, CandidateResearch]],
+    ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
+        if thread_id not in self._contexts:
+            raise RuntimeError(f"Unknown planning thread '{thread_id}'.")
+
+        active_config = config or self._configs.get(thread_id) or self._make_config(thread_id)
+        self._configs[thread_id] = active_config
+
+        resume_payload = self._build_resume_payload(
+            thread_id=thread_id,
+            selections=selections,
+            research_plan=research_plan,
+        )
+
+        command = Command(resume=resume_payload)
+        context = self._contexts[thread_id]
+        result = await self.graph.ainvoke(command, context=context, config=active_config)
+        self._store_result(thread_id, result)
+        return active_config, result
+
+
+def _messages_to_strings(result: Mapping[str, Any]) -> List[str]:
+    raw_messages = result.get("messages", [])
+    rendered: List[str] = []
+    for message in raw_messages:
+        if isinstance(message, BaseMessage):
+            content = getattr(message, "content", None)
+            if isinstance(content, str):
+                rendered.append(content)
+            else:
+                rendered.append(repr(message))
+        else:
+            rendered.append(str(message))
+    return rendered
+
+
+def _extract_interrupt(result: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+    raw = result.get("__interrupt__")
+    if not raw:
+        return None
+    first = raw[0]
+    payload = getattr(first, "value", first)
+    if isinstance(payload, Mapping):
+        return dict(payload)
+    return None
+
+
+def _determine_status(result: Mapping[str, Any]) -> Literal["interrupt", "complete", "needs_follow_up", "no_plan"]:
+    if "__interrupt__" in result:
+        return "interrupt"
+    final_plan = result.get("final_plan")
+    if final_plan and getattr(final_plan, "research_plan", None):
+        return "needs_follow_up"
+    if final_plan:
+        return "complete"
+    return "no_plan"
+
+
+def _result_to_response(
+    thread_id: str,
+    config: Dict[str, Any],
+    result: Mapping[str, Any],
+) -> PlanningResponse:
+    status = _determine_status(result)
+    interrupt_payload = _extract_interrupt(result)
+
+    return PlanningResponse(
+        thread_id=thread_id,
+        status=status,
+        config=config,
+        estimated_budget=result.get("estimated_budget"),
+        research_plan=result.get("research_plan"),
+        lodging=result.get("lodging"),
+        activities=result.get("activities"),
+        food=result.get("food"),
+        intercity_transport=result.get("intercity_transport"),
+        recommendations=result.get("recommendations"),
+        final_plan=result.get("final_plan"),
+        interrupt=interrupt_payload,
+        messages=_messages_to_strings(result),
+    )
 
 
 @lru_cache(maxsize=1)
@@ -178,185 +408,57 @@ def get_workflow_bundle() -> WorkflowBundle:
     return WorkflowBundle(settings)
 
 
-def _state_messages_to_strings(state: State) -> List[str]:
-    rendered: List[str] = []
-    for message in state.messages:
-        content = getattr(message, "content", None)
-        if isinstance(content, str):
-            rendered.append(content)
-        else:
-            rendered.append(repr(message))
-    return rendered
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    try:
+        yield
+    finally:
+        bundle = get_workflow_bundle()
+        await bundle.close()
 
 
-app = FastAPI(title="Trip Planner API", version="0.1.0")
+app = FastAPI(title="Trip Planner API", version="0.1.0", lifespan=lifespan)
 
 
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    bundle = get_workflow_bundle()
-    await bundle.close()
+@app.post("/plan/start", response_model=PlanningResponse)
+async def start_planning(payload: PlanRequest) -> PlanningResponse:
+    """Start the planning workflow and return the first state (interrupt or final)."""
 
-
-@app.post("/plan", response_model=PlanResponse)
-async def generate_plan(payload: PlanRequest) -> PlanResponse:
     bundle = get_workflow_bundle()
     try:
-        thread_id, state = await bundle.plan_trip(
-            context=payload.context,
-            user_prompt=payload.user_prompt,
-            thread_id=payload.thread_id,
-        )
-    except RuntimeError as exc:  # configuration issues
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    except Exception as exc:  # pragma: no cover - defensive
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    final_plan = state.final_plan
-    status = "complete"
-    next_plan = None
-    if final_plan and final_plan.research_plan:
-        status = "needs_follow_up"
-        next_plan = final_plan.research_plan
-    elif final_plan is None:
-        status = "no_plan"
-
-    return PlanResponse(
-        thread_id=thread_id,
-        status=status,
-        final_plan=final_plan,
-        next_research_plan=next_plan,
-        messages=_state_messages_to_strings(state),
-    )
-
-
-@app.post("/plan/start", response_model=InterruptResponse)
-async def start_planning_with_interrupt(payload: PlanRequest) -> InterruptResponse:
-    """
-    Start trip planning workflow that will pause at interrupt points for human review.
-    
-    This endpoint runs the workflow until it reaches a human review point,
-    then returns the current state and interrupt data for user decision.
-    """
-    bundle = get_workflow_bundle()
-    try:
-        # Create thread ID if not provided
-        thread_id = payload.thread_id or str(uuid4())
-        
-        # Set up configuration for interrupt handling
-        config = {
-            "recursion_limit": 100,
-            "configurable": {"thread_id": thread_id}
-        }
-        
-        # Create initial state
-        initial_state = State(messages=[], estimated_budget=None, research_plan=None)
-        
-        # Run workflow until interrupt
-        result = await bundle.graph.ainvoke(
-            initial_state, 
-            config=config, 
+        thread_id, config, result = await bundle.plan_trip(
             context=payload.context
         )
-        
-        # Check if we hit an interrupt
-        if "__interrupt__" in result:
-            interrupt_data = result["__interrupt__"][0].value
-            
-            return InterruptResponse(
-                thread_id=thread_id,
-                status="interrupt",
-                estimated_budget=result.get("estimated_budget"),
-                research_plan=result.get("research_plan"),
-                lodging=result.get("lodging"),
-                activities=result.get("activities"),
-                food=result.get("food"),
-                intercity_transport=result.get("intercity_transport"),
-                recommendations=result.get("recommendations"),
-                interrupt_data=interrupt_data,
-                messages=_state_messages_to_strings(result),
-            )
-        else:
-            # No interrupt - workflow completed
-            final_plan = result.get("final_plan")
-            status = "complete" if final_plan else "no_plan"
-            
-            return InterruptResponse(
-                thread_id=thread_id,
-                status=status,
-                estimated_budget=result.get("estimated_budget"),
-                research_plan=result.get("research_plan"),
-                lodging=result.get("lodging"),
-                activities=result.get("activities"),
-                food=result.get("food"),
-                intercity_transport=result.get("intercity_transport"),
-                recommendations=result.get("recommendations"),
-                final_plan=final_plan,
-                messages=_state_messages_to_strings(result),
-            )
-            
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    except Exception as exc:
+    except Exception as exc:  # pragma: no cover - safeguards unexpected graph failures
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    return _result_to_response(thread_id, config, result)
 
-@app.post("/plan/resume", response_model=PlanResponse)
-async def resume_planning_after_interrupt(payload: ResumeRequest) -> PlanResponse:
-    """
-    Resume trip planning workflow after human review selections.
-    
-    This endpoint continues the workflow from the interrupt point using
-    the human selections provided in the request.
-    """
+
+@app.post("/plan/resume/{thread_id}", response_model=PlanningResponse)
+async def resume_planning(thread_id: str, payload: ResumeRequest) -> PlanningResponse:
+    """Resume the planning workflow after collecting human feedback."""
+
     bundle = get_workflow_bundle()
     try:
-        # Set up configuration
-        config = {
-            "recursion_limit": 100,
-            "configurable": {"thread_id": payload.thread_id}
-        }
-        
-        # Create resume command with human selections
-        from langgraph.types import Command
-        resume_command = Command(resume=payload.human_selections)
-        
-        # Resume workflow execution
-        result = await bundle.graph.ainvoke(resume_command, config=config)
-        
-        # Check if workflow completed or hit another interrupt
-        if "__interrupt__" in result:
-            interrupt_data = result["__interrupt__"][0].value
-            
-            return PlanResponse(
-                thread_id=payload.thread_id,
-                status="interrupt",
-                messages=_state_messages_to_strings(result),
-            )
-        else:
-            # Workflow completed
-            final_plan = result.get("final_plan")
-            status = "complete" if final_plan else "no_plan"
-            next_plan = None
-            if final_plan and final_plan.research_plan:
-                status = "needs_follow_up"
-                next_plan = final_plan.research_plan
-            
-            return PlanResponse(
-                thread_id=payload.thread_id,
-                status=status,
-                final_plan=final_plan,
-                next_research_plan=next_plan,
-                messages=_state_messages_to_strings(result),
-            )
-            
+        config, result = await bundle.resume_trip(
+            thread_id=thread_id,
+            config=payload.config,
+            selections=payload.selections,
+            research_plan=payload.research_plan,
+        )
     except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - safeguards unexpected graph failures
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return _result_to_response(thread_id, config, result)
 
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint to verify API is running."""
+async def health_check() -> Dict[str, str]:
+    """Simple health endpoint used for readiness probes."""
+
     return {"status": "healthy", "service": "trip-planner-api"}

@@ -84,6 +84,8 @@ class RetrievalPipeline:
             docstore=InMemoryDocstore(),
             embedding_function=embeddings,
             index_to_docstore_id={},
+            relevance_score_fn=lambda d: float(1.0 / (1.0 + float(d))),
+            normalize_L2=True,
         )
         self._retriever = self._vector_store.as_retriever(search_kwargs={"k": retriever_k})
         self._reranker = CrossEncoderReranker(
@@ -132,8 +134,14 @@ class RetrievalPipeline:
         if not docs:
             return []
 
-        filtered_store = await FAISS.afrom_documents(docs, self._embeddings)
-        filtered_docs = await filtered_store.asimilarity_search_with_relevance_scores(query, k=k)
+        filtered_store = await FAISS.afrom_documents(docs, 
+                                                    self._embeddings, 
+                                                    normalize_L2=True, 
+                                                    relevance_score_fn=lambda d: float(1.0 / (1.0 + float(d))))
+                                                    
+        score_threshold = {"score_threshold": 0.3}        
+
+        filtered_docs = await filtered_store.asimilarity_search_with_relevance_scores(query, k=k, **score_threshold)
         return [doc for doc, _ in filtered_docs]
 
     async def rerank(
