@@ -1,0 +1,367 @@
+TRIP PLANNER FEATURE SLICE ARCHITECTURE
+========================================
+
+┌─────────────────────────────────────────────────────────────────┐
+│                        TRIP PLANNER SYSTEM                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────────┐ │
+│  │   API GATEWAY   │    │ TRIP PLANNING   │    │ CONFIG MGMT  │ │
+│  │                 │    │     CORE        │    │              │ │
+│  │ • REST API      │◄──►│                 │◄──►│              │ │
+│  │ • Auth/Validation│   │ • Workflow      │    │ • API Keys   │ │
+│  │ • Error Handling│    │ • State Mgmt    │    │ • Env Vars   │ │
+│  │ • Rate Limiting │    │ • Orchestration│    │ • Settings  │ │
+│  └─────────────────┘    │ • Interrupts    │    └──────────────┘ │
+│           │              └─────────────────┘                    │
+│           │                       │                              │
+│           ▼                       ▼                              │
+│  ┌─────────────────┐    ┌─────────────────┐                     │
+│  │ RESEARCH AGENTS │    │ KNOWLEDGE       │                     │
+│  │                 │    │ RETRIEVAL       │                     │
+│  │ • Lodging       │◄──►│                 │                     │
+│  │ • Activities    │    │ • RAG Pipeline  │                     │
+│  │ • Food          │    │ • Vector Store  │                     │
+│  │ • Transport     │    │ • Search        │                     │
+│  │ • Safety        │    │ • Context       │                     │
+│  └─────────────────┘    └─────────────────┘                     │
+│           │                       │                              │
+│           ▼                       ▼                              │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │                EXTERNAL DATA SOURCES                        │ │
+│  │                                                             │ │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────┐ │ │
+│  │  │   AMADEUS   │ │ TRIPADVISOR │ │   REDDIT    │ │ INTERNET│ │ │
+│  │  │   FLIGHTS   │ │ HOTELS/ACT  │ │ COMMUNITY   │ │ SEARCH  │ │ │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────┘ │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+
+FEATURE SLICE DETAILS
+=====================
+
+┌─────────────────────────────────────────────────────────────────┐
+│                        API GATEWAY SLICE                        │
+├─────────────────────────────────────────────────────────────────┤
+│ Purpose: RESTful API interface for trip planning system        │
+│                                                                 │
+│ Components:                                                     │
+│ • FastAPI Application                                          │
+│ • Request/Response Models                                      │
+│ • Authentication & Authorization                               │
+│ • Error Handling & Logging                                     │
+│ • Rate Limiting                                                │
+│ • Input Validation                                             │
+│                                                                 │
+│ Key Files:                                                     │
+│ • src/api/app.py                                               │
+│ • Request/Response models                                      │
+│ • Middleware components                                        │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    TRIP PLANNING CORE SLICE                     │
+├─────────────────────────────────────────────────────────────────┤
+│ Purpose: Central orchestration and workflow management          │
+│                                                                 │
+│ Components:                                                     │
+│ • LangGraph Workflow                                           │
+│ • State Management                                             │
+│ • Human-in-the-Loop Handling                                   │
+│ • Plan Synthesis                                               │
+│ • Workflow Orchestration                                       │
+│                                                                 │
+│ Key Files:                                                     │
+│ • src/workflows/planner.py                                     │
+│ • src/core/domain.py                                           │
+│ • src/core/types.py                                            │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      RESEARCH AGENTS SLICE                      │
+├─────────────────────────────────────────────────────────────────┤
+│ Purpose: Specialized AI agents for gathering travel info       │
+│                                                                 │
+│ Components:                                                     │
+│ • Lodging Agent                                                │
+│ • Activities Agent                                             │
+│ • Food Agent                                                   │
+│ • Transport Agent                                              │
+│ • Safety Agent                                                 │
+│ • Agent Orchestration                                          │
+│                                                                 │
+│ Key Files:                                                     │
+│ • Agent implementations in src/workflows/planner.py           │
+│ • Agent output models in src/core/domain.py                    │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    KNOWLEDGE RETRIEVAL SLICE                    │
+├─────────────────────────────────────────────────────────────────┤
+│ Purpose: RAG pipeline for travel knowledge                      │
+│                                                                 │
+│ Components:                                                     │
+│ • RAG Pipeline                                                 │
+│ • Vector Store                                                 │
+│ • Document Processing                                          │
+│ • Semantic Search                                              │
+│ • Context Retrieval                                            │
+│                                                                 │
+│ Key Files:                                                     │
+│ • src/pipelines/rag.py                                         │
+│ • Vector store configuration                                   │
+│ • Document processing utilities                                │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                      EXTERNAL DATA SLICE                        │
+├─────────────────────────────────────────────────────────────────┤
+│ Purpose: Integration with external APIs and data sources       │
+│                                                                 │
+│ Components:                                                     │
+│ • Amadeus Flight API                                            │
+│ • TripAdvisor API                                              │
+│ • Reddit API                                                   │
+│ • Internet Search                                              │
+│ • Geocoding Services                                           │
+│                                                                 │
+│ Key Files:                                                     │
+│ • src/services/amadeus.py                                     │
+│ • src/services/trip_advisor.py                                │
+│ • src/services/geocoding.py                                    │
+│ • src/tools/internet_search.py                                │
+│ • src/tools/reddit_search.py                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                   CONFIGURATION MANAGEMENT SLICE                │
+├─────────────────────────────────────────────────────────────────┤
+│ Purpose: Centralized configuration and environment management  │
+│                                                                 │
+│ Components:                                                     │
+│ • API Key Management                                           │
+│ • Environment Variables                                        │
+│ • Service Configuration                                        │
+│ • Feature Flags                                                │
+│ • Settings Validation                                          │
+│                                                                 │
+│ Key Files:                                                     │
+│ • src/core/config.py                                            │
+│ • Environment variable handling                                │
+│ • Service credential management                                │
+└─────────────────────────────────────────────────────────────────┘
+
+DATA FLOW ARCHITECTURE
+======================
+
+User Request
+     │
+     ▼
+┌─────────────┐
+│ API Gateway │
+└─────┬───────┘
+      │
+      ▼
+┌─────────────────┐
+│ Trip Planning   │
+│ Core Workflow   │
+└─────┬───────────┘
+      │
+      ▼
+┌─────────────────┐
+│ Research Agents │
+└─────┬───────────┘
+      │
+      ▼
+┌─────────────────┐
+│ Knowledge       │
+│ Retrieval       │
+└─────┬───────────┘
+      │
+      ▼
+┌─────────────────┐
+│ External Data   │
+│ Sources         │
+└─────────────────┘
+
+DEPLOYMENT ARCHITECTURE
+=======================
+
+CURRENT MONOLITHIC DEPLOYMENT:
+┌─────────────────────────────────────────────────────────────────┐
+│                    SINGLE APPLICATION                          │
+│                                                                 │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
+│  │ API Gateway │ │ Trip Core   │ │ Research    │ │ Knowledge   │ │
+│  │ Slice       │ │ Slice       │ │ Agents      │ │ Retrieval   │ │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
+│                                                                 │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                │
+│  │ External    │ │ Config     │ │ Shared     │                │
+│  │ Data        │ │ Management │ │ Utilities  │                │
+│  └─────────────┘ └─────────────┘ └─────────────┘                │
+└─────────────────────────────────────────────────────────────────┘
+
+FUTURE MICROSERVICES DEPLOYMENT:
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│ API Gateway │ │ Trip Core   │ │ Research    │ │ Knowledge   │
+│ Service     │ │ Service     │ │ Agents      │ │ Retrieval   │
+│             │ │             │ │ Service     │ │ Service     │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+       │               │               │               │
+       └───────────────┼───────────────┼───────────────┘
+                       │               │
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│ External    │ │ Config      │ │ Message     │
+│ Data        │ │ Service     │ │ Queue       │
+│ Service     │ │             │ │ Service     │
+└─────────────┘ └─────────────┘ └─────────────┘
+
+INTERFACE CONTRACTS
+===================
+
+API Gateway ↔ Trip Planning Core:
+┌─────────────────────────────────────────────────────────────────┐
+│ interface TripPlanningRequest {                                │
+│   context: Context;                                            │
+│   threadId?: string;                                           │
+│ }                                                              │
+│                                                                 │
+│ interface TripPlanningResponse {                               │
+│   threadId: string;                                            │
+│   status: 'complete' | 'interrupt' | 'needs_follow_up';       │
+│   finalPlan?: FinalPlan;                                       │
+│   nextResearchPlan?: ResearchPlan;                             │
+│   messages: string[];                                          │
+│ }                                                              │
+└─────────────────────────────────────────────────────────────────┘
+
+Trip Planning Core ↔ Research Agents:
+┌─────────────────────────────────────────────────────────────────┐
+│ interface ResearchRequest {                                    │
+│   context: Context;                                            │
+│   researchPlan: ResearchPlan;                                  │
+│   budget: BudgetEstimate;                                      │
+│ }                                                              │
+│                                                                 │
+│ interface ResearchResponse {                                  │
+│   lodging?: LodgingAgentOutput;                               │
+│   activities?: ActivitiesAgentOutput;                         │
+│   food?: FoodAgentOutput;                                     │
+│   transport?: IntercityTransportAgentOutput;                  │
+│   recommendations?: RecommendationsOutput;                    │
+│ }                                                              │
+└─────────────────────────────────────────────────────────────────┘
+
+Research Agents ↔ Knowledge Retrieval:
+┌─────────────────────────────────────────────────────────────────┐
+│ interface KnowledgeQuery {                                     │
+│   query: string;                                               │
+│   context: string;                                             │
+│   filters?: Record<string, any>;                              │
+│ }                                                              │
+│                                                                 │
+│ interface KnowledgeResponse {                                  │
+│   documents: Document[];                                       │
+│   relevance: number;                                           │
+│   sources: string[];                                           │
+│ }                                                              │
+└─────────────────────────────────────────────────────────────────┘
+
+Knowledge Retrieval ↔ External Data:
+┌─────────────────────────────────────────────────────────────────┐
+│ interface ExternalDataRequest {                               │
+│   service: 'amadeus' | 'tripadvisor' | 'reddit' | 'internet'; │
+│   query: string;                                               │
+│   parameters: Record<string, any>;                            │
+│ }                                                              │
+│                                                                 │
+│ interface ExternalDataResponse {                               │
+│   data: any[];                                                 │
+│   metadata: {                                                  │
+│     source: string;                                            │
+│     timestamp: string;                                          │
+│     confidence: number;                                         │
+│   };                                                           │
+│ }                                                              │
+└─────────────────────────────────────────────────────────────────┘
+
+SECURITY ARCHITECTURE
+=====================
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    SECURITY LAYER                              │
+├─────────────────────────────────────────────────────────────────┤
+│ • Authentication (JWT/OAuth)                                  │
+│ • Authorization (RBAC)                                         │
+│ • API Key Management                                           │
+│ • Rate Limiting                                                │
+│ • Input Validation                                             │
+│ • Data Encryption                                              │
+│ • Audit Logging                                                │
+└─────────────────────────────────────────────────────────────────┘
+
+MONITORING AND OBSERVABILITY
+============================
+
+┌─────────────────────────────────────────────────────────────────┐
+│                OBSERVABILITY STACK                             │
+├─────────────────────────────────────────────────────────────────┤
+│ • Metrics Collection (Prometheus)                             │
+│ • Log Aggregation (ELK Stack)                                 │
+│ • Distributed Tracing (Jaeger)                                │
+│ • Health Checks                                                │
+│ • Alerting (AlertManager)                                      │
+│ • Dashboards (Grafana)                                         │
+└─────────────────────────────────────────────────────────────────┘
+
+IMPLEMENTATION PHASES
+====================
+
+Phase 1: Core Infrastructure
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. trip-planning-core: Establish workflow foundation          │
+│ 2. config-management: Set up configuration system              │
+│ 3. external-data: Implement basic API integrations            │
+└─────────────────────────────────────────────────────────────────┘
+
+Phase 2: Intelligence Layer
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. research-agents: Implement specialized agents               │
+│ 2. knowledge-retrieval: Build RAG pipeline                     │
+│ 3. trip-planning-core: Integrate agents with workflow         │
+└─────────────────────────────────────────────────────────────────┘
+
+Phase 3: API Layer
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. api-gateway: Implement REST API                             │
+│ 2. Integration testing: End-to-end workflow validation          │
+└─────────────────────────────────────────────────────────────────┘
+
+TESTING STRATEGY
+================
+
+Unit Testing:
+┌─────────────────────────────────────────────────────────────────┐
+│ • Each slice has its own test suite                            │
+│ • Mock external dependencies                                   │
+│ • Test business logic in isolation                             │
+└─────────────────────────────────────────────────────────────────┘
+
+Integration Testing:
+┌─────────────────────────────────────────────────────────────────┐
+│ • Test slice interactions                                       │
+│ • Validate data flow between slices                            │
+│ • End-to-end workflow testing                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+Contract Testing:
+┌─────────────────────────────────────────────────────────────────┐
+│ • Validate interfaces between slices                           │
+│ • Ensure backward compatibility                                │
+│ • API contract validation                                      │
+└─────────────────────────────────────────────────────────────────┘
+
+This architecture provides a clear, scalable foundation for the Trip Planner 
+project with well-defined feature slices, clear interfaces, and a path for 
+future microservices migration.
