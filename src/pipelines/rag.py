@@ -194,7 +194,7 @@ class RetrievalPipeline:
         return Tool(
             name=name,
             description=description,
-            coroutine=_run,
+            func=_run,
         )
 
 

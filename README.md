@@ -1,6 +1,8 @@
 # Trip Planner
 
-Trip Planner is an agentic travel planning platform built around a LangGraph workflow extracted from `trip_planner.ipynb`. The system coordinates multiple research agents (lodging, activities, food, transport, and advisory) to assemble a day-by-day itinerary, supports human-in-the-loop decisions, and exposes the workflow through a FastAPI service.
+Trip Planner is an agentic travel planning platform built around a LangGraph workflow. The system coordinates multiple research agents (lodging, activities, food, transport, and advisory) to assemble a day-by-day itinerary, supports human-in-the-loop decisions, and exposes the workflow through a FastAPI service.
+
+Start from `trip_planner.ipynb` to understand the workflow.
 
 ## Key Capabilities
 

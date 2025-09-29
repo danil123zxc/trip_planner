@@ -3,6 +3,13 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+
+# Load .env file before any other imports that might need environment variables
+load_dotenv()
+
 from functools import lru_cache
 from typing import Any, AsyncGenerator, Dict, List, Literal, Mapping, Optional, Tuple
 from uuid import uuid4
@@ -27,6 +34,10 @@ from src.core.domain import (
     RecommendationsOutput,
     ResearchPlan,
     State,
+    CandidateLodging,
+    CandidateIntercityTransport,
+    CandidateActivity,
+    CandidateFood,
 )
 from src.pipelines.rag import RetrievalConfig, RetrievalPipeline, create_default_pipeline
 from src.services.amadeus import create_amadeus_client, create_flight_search_tool
@@ -53,36 +64,26 @@ class PlanRequest(BaseModel):
     """Request payload used to start a new planning run."""
 
     context: Context = Field(..., description="Structured trip configuration containing destination, dates, and travellers")
-    thread_id: Optional[str] = Field(
-        default=None,
-        description="Existing planning thread identifier. If omitted a new thread is created.",
-    )
-    user_prompt: Optional[str] = Field(
-        default=None,
-        description="Optional free-form instructions injected as the first human message.",
-    )
 
 
 class ResumeSelections(BaseModel):
     """Indices of options chosen during human-in-the-loop review."""
 
-    lodging: Optional[int] = Field(
+    lodging: Optional[CandidateLodging] = Field(
         default=None,
-        ge=0,
-        description="Index of the selected lodging option (0-based).",
+        description="Candidate of the selected lodging option (0-based).",
     )
-    intercity_transport: Optional[int] = Field(
+    intercity_transport: Optional[CandidateIntercityTransport] = Field(
         default=None,
-        ge=0,
-        description="Index of the selected intercity transport option (0-based).",
+        description="Candidate of the selected intercity transport option.",
     )
-    activities: Optional[List[int]] = Field(
+    activities: Optional[List[CandidateActivity]] = Field(
         default=None,
-        description="Indices of activity options to keep. Empty list means keep all.",
+        description="Candidates of activity options to keep. Empty list means keep all.",
     )
-    food: Optional[List[int]] = Field(
+    food: Optional[List[CandidateFood]] = Field(
         default=None,
-        description="Indices of food options to keep. Empty list means keep all.",
+        description="Candidates of food options to keep. Empty list means keep all.",
     )
 
 
@@ -106,7 +107,6 @@ class ResumeRequest(BaseModel):
 class PlanningResponse(BaseModel):
     """Unified response returned by both the start and resume endpoints."""
 
-    thread_id: str = Field(..., description="Unique identifier for the planning session")
     status: Literal["interrupt", "complete", "needs_follow_up", "no_plan"] = Field(
         ..., description="Current workflow status"
     )
@@ -119,7 +119,7 @@ class PlanningResponse(BaseModel):
     research_plan: Optional[ResearchPlan] = Field(
         default=None, description="Latest research plan produced by the workflow"
     )
-    lodging: Optional[LodgingAgentOutput] = Field(
+    lodging: Optional[List[CandidateLodging]] = Field(
         default=None, description="Candidate lodging options surfaced by the agent"
     )
     activities: Optional[ActivitiesAgentOutput] = Field(
@@ -150,7 +150,7 @@ def _ensure_configuration(settings: ApiSettings) -> None:
     if missing:
         joined = ", ".join(missing)
         raise RuntimeError(
-            "Missing required environment variables for planner workflow: " f"{joined}"
+            f"Missing required environment variables for planner workflow: {joined}"
         )
 
 
@@ -159,13 +159,13 @@ class WorkflowBundle:
 
     def __init__(self, settings: ApiSettings) -> None:
         _ensure_configuration(settings)
-        settings.apply_langsmith_tracing()
+        settings.apply_langsmith_tracing()  
 
         self.settings = settings
         self.recursion_limit = DEFAULT_RECURSION_LIMIT
 
         self.llm = ChatXAI(
-            model="GROK_4_FAST_REASONING",
+            model="grok-4-fast-reasoning",
             temperature=0,
             api_key=settings.ensure("xai_api_key"),
         )
@@ -294,15 +294,18 @@ class WorkflowBundle:
     async def plan_trip(
         self,
         *,
-        context: Context,
+        context: Context
     ) -> Tuple[str, Dict[str, Any], Mapping[str, Any]]:
         active_thread = f"trip_{uuid4()}"
         config = self._configs.get(active_thread) or self._make_config(active_thread)
 
         self._contexts[active_thread] = context
         self._configs[active_thread] = config
+        self._pending_states.pop(active_thread, None)
+        self._pending_interrupts.pop(active_thread, None)
 
-        messages = []
+        messages: List[BaseMessage] = []
+      
         initial_state = State(messages=messages)
 
         result = await self.graph.ainvoke(
@@ -316,11 +319,18 @@ class WorkflowBundle:
     async def resume_trip(
         self,
         *,
-        thread_id: str,
         config: Optional[Dict[str, Any]],
         selections: ResumeSelections,
         research_plan: Optional[Dict[str, CandidateResearch]],
     ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
+        thread_id = None
+        if config:
+            configurable = config.get("configurable", {})
+            thread_id = configurable.get("thread_id")
+
+        if not thread_id:
+            raise RuntimeError("Resume config must include configurable.thread_id.")
+
         if thread_id not in self._contexts:
             raise RuntimeError(f"Unknown planning thread '{thread_id}'.")
 
@@ -385,13 +395,23 @@ def _result_to_response(
     status = _determine_status(result)
     interrupt_payload = _extract_interrupt(result)
 
+    # Extract lodging list from nested structure
+    lodging_data = result.get("lodging")
+    lodging_list = None
+    if lodging_data and hasattr(lodging_data, 'lodging'):
+        lodging_list = lodging_data.lodging
+    elif lodging_data and isinstance(lodging_data, dict) and 'lodging' in lodging_data:
+        lodging_list = lodging_data['lodging']
+    elif lodging_data and isinstance(lodging_data, list):
+        lodging_list = lodging_data
+
     return PlanningResponse(
         thread_id=thread_id,
         status=status,
         config=config,
         estimated_budget=result.get("estimated_budget"),
         research_plan=result.get("research_plan"),
-        lodging=result.get("lodging"),
+        lodging=lodging_list,
         activities=result.get("activities"),
         food=result.get("food"),
         intercity_transport=result.get("intercity_transport"),
@@ -422,7 +442,35 @@ app = FastAPI(title="Trip Planner API", version="0.1.0", lifespan=lifespan)
 
 @app.post("/plan/start", response_model=PlanningResponse)
 async def start_planning(payload: PlanRequest) -> PlanningResponse:
-    """Start the planning workflow and return the first state (interrupt or final)."""
+    """Start the planning workflow and return the first state (interrupt or final).
+    ```json
+            {
+        "context": {
+            "travellers": [
+            {
+                "name": "Danil",
+                "date_of_birth": "2002-09-29",
+                "spoken_languages": [
+                "english"
+                ],
+                "interests": [
+                "active sports"
+                ],
+                "nationality": "russian"      }
+            ],
+            "budget": 1000,
+            "currency": "USD",
+            "destination": "Tokyo",
+            "destination_country": "Japan",
+            "date_from": "2025-10-01",
+            "date_to": "2025-10-05",
+            "group_type": "alone",
+            "trip_purpose": "cultural experience",
+            "current_location": "Seoul"
+        }
+        }
+    ```
+    """
 
     bundle = get_workflow_bundle()
     try:
@@ -437,14 +485,13 @@ async def start_planning(payload: PlanRequest) -> PlanningResponse:
     return _result_to_response(thread_id, config, result)
 
 
-@app.post("/plan/resume/{thread_id}", response_model=PlanningResponse)
-async def resume_planning(thread_id: str, payload: ResumeRequest) -> PlanningResponse:
+@app.post("/plan/resume", response_model=PlanningResponse)
+async def resume_planning(payload: ResumeRequest) -> PlanningResponse:
     """Resume the planning workflow after collecting human feedback."""
 
     bundle = get_workflow_bundle()
     try:
         config, result = await bundle.resume_trip(
-            thread_id=thread_id,
             config=payload.config,
             selections=payload.selections,
             research_plan=payload.research_plan,
@@ -453,6 +500,11 @@ async def resume_planning(thread_id: str, payload: ResumeRequest) -> PlanningRes
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - safeguards unexpected graph failures
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    thread_config = config.get("configurable", {}) if isinstance(config, dict) else {}
+    thread_id = thread_config.get("thread_id")
+    if not thread_id:
+        raise HTTPException(status_code=500, detail="Missing thread_id in resume config.")
 
     return _result_to_response(thread_id, config, result)
 

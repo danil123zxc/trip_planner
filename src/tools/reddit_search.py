@@ -131,5 +131,5 @@ def create_reddit_tool(settings: ApiSettings, pipeline: RetrievalPipeline) -> To
     return Tool(
         name="search_reddit",
         description=reddit_search.description or "Search Reddit",
-        coroutine=_run,
+        func=_run,
     )

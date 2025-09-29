@@ -1,6 +1,0 @@
-# Development and testing dependencies
-pytest
-pytest-asyncio
-ipython
-jupyterlab
-nbformat

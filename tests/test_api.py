@@ -31,22 +31,23 @@ class StubBundle:
             {},
         )
 
-    async def plan_trip(self, *, context, user_prompt, thread_id):  # type: ignore[override]
+    async def plan_trip(self, *, context, user_prompt):  # type: ignore[override]
         self.plan_trip_call = {
             "context": context,
             "user_prompt": user_prompt,
-            "thread_id": thread_id,
         }
         return self.plan_trip_result
 
     async def resume_trip(
         self,
         *,
-        thread_id,
         config,
         selections,
         research_plan,
     ):  # type: ignore[override]
+        thread_id = None
+        if config:
+            thread_id = config.get("configurable", {}).get("thread_id")
         self.resume_trip_call = {
             "thread_id": thread_id,
             "config": config,
@@ -142,7 +143,41 @@ def test_plan_start_returns_interrupt_payload(client: TestClient, stub_bundle: S
     assert data["interrupt"] == interrupt_payload
     assert data["lodging"]["lodging"][0]["name"] == "Hotel Aurora"
 
+def test_plan_start_forwards_user_prompt(client: TestClient, stub_bundle: StubBundle):
+    """User prompt should be passed through to the workflow bundle."""
 
+    request_payload = {
+        "context": {
+            "destination": "Osaka",
+            "destination_country": "Japan",
+            "date_from": "2025-02-01",
+            "date_to": "2025-02-05",
+            "budget": 1800,
+            "currency": "USD",
+            "group_type": "friends",
+        },
+        "user_prompt": "Focus on street food options",
+    }
+
+    response = client.post("/plan/start", json=request_payload)
+    assert response.status_code == 200
+    assert stub_bundle.plan_trip_call["user_prompt"] == "Focus on street food options"
+    assert stub_bundle.plan_trip_call["context"].destination == "Osaka"
+
+
+def test_plan_resume_without_thread_id_errors(client: TestClient, stub_bundle: StubBundle):
+    """Resume should fail clearly when the workflow config lacks a thread id."""
+
+    stub_bundle.resume_trip_result = ({}, {})
+
+    request_payload = {
+        "config": {},
+        "selections": {},
+    }
+
+    response = client.post("/plan/resume", json=request_payload)
+    assert response.status_code == 500
+    assert "thread_id" in response.json()["detail"]
 def test_plan_resume_returns_final_plan(client: TestClient, stub_bundle: StubBundle):
     """Resuming the planner should surface the final plan when available."""
 
@@ -157,7 +192,7 @@ def test_plan_resume_returns_final_plan(client: TestClient, stub_bundle: StubBun
         "selections": {"lodging": 0},
     }
 
-    response = client.post("/plan/resume/stub-thread", json=request_payload)
+    response = client.post("/plan/resume", json=request_payload)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "complete"

@@ -88,5 +88,5 @@ def create_internet_tool(settings: ApiSettings, pipeline: RetrievalPipeline) -> 
     return Tool(
         name="search_internet",
         description="Search trusted web sources for destination research.",
-        coroutine=_run,
+        func=_run,
     )

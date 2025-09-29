@@ -341,9 +341,13 @@ class TripAdvisor:
         photos: List[PhotosData] = []
         for item in data.get("data", []):
             original = (item.get("images") or {}).get("original") or {}
+            # Debug: Print the actual item structure
+            print(f"DEBUG - Photo item: {item}")
+            # Use the location ID as the photo ID if no specific photo ID exists
+            photo_id = input.locationId
             photos.append(
                 PhotosData(
-                    id=str(item.get("id")),
+                    id=str(photo_id),
                     caption=item.get("caption"),
                     published_date=item.get("published_date"),
                     image=Image(
@@ -362,11 +366,13 @@ class TripAdvisor:
         data = await self._aget(f"{self.api_url}/{input.locationId}/reviews", params)
         reviews: List[ReviewData] = []
         for item in data.get("data", []):
+            # Use the location ID from the input and create review ID based on location
+            review_id = input.locationId
             reviews.append(
                 ReviewData(
-                    id=str(item.get("id")),
+                    id=str(review_id),
                     lang=item.get("lang"),
-                    location_id=str(item.get("location_id")),
+                    location_id=str(input.locationId),  # Use the location ID from the search
                     published_date=item.get("published_date"),
                     rating=item.get("rating"),
                     url=item.get("url"),
@@ -494,34 +500,34 @@ def create_trip_advisor_tools(client: TripAdvisor) -> Dict[str, Tool]:
         return await client.comprehensive_search(ComprehensiveLocationInput(**params))
 
     return {
-        "location_search_tool": Tool(
+        "location_search_tool": Tool.from_function(
+            location_search,
             name="location_search_tool",
             description="Search TripAdvisor for matching locations.",
-            coroutine=location_search,
         ),
-        "location_details_tool": Tool(
+        "location_details_tool": Tool.from_function(
+            location_details,
             name="location_details_tool",
             description="Fetch TripAdvisor details for a location ID.",
-            coroutine=location_details,
         ),
-        "location_photos_tool": Tool(
+        "location_photos_tool": Tool.from_function(
+            location_photos,
             name="location_photos_tool",
             description="Retrieve photos for a TripAdvisor location.",
-            coroutine=location_photos,
         ),
-        "location_reviews_tool": Tool(
+        "location_reviews_tool": Tool.from_function(
+            location_reviews,
             name="location_reviews_tool",
             description="Retrieve reviews for a TripAdvisor location.",
-            coroutine=location_reviews,
         ),
-        "nearby_search_tool": Tool(
+        "nearby_search_tool": Tool.from_function(
+            nearby_search,
             name="nearby_search_tool",
             description="Return nearby places for a coordinate pair.",
-            coroutine=nearby_search,
         ),
-        "comprehensive_search_tool": Tool(
+        "comprehensive_search_tool": Tool.from_function(
+            comprehensive,
             name="comprehensive_search_tool",
             description="Fetch TripAdvisor details, photos, and reviews in one call.",
-            coroutine=comprehensive,
         ),
     }
