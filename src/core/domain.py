@@ -1,4 +1,18 @@
-"""Pydantic data models extracted from the trip planner notebook."""
+"""Pydantic data models for the AI-powered trip planning system.
+
+This module contains all the data models used throughout the trip planning workflow,
+including budget estimates, candidate objects, agent outputs, and the complete
+final plan structure. These models ensure type safety and data validation across
+the entire application.
+
+Key model categories:
+- BudgetEstimate: AI-generated budget breakdown by travel category
+- Candidate*: Individual options for lodging, activities, food, transport
+- *AgentOutput: Structured outputs from specialized research agents
+- FinalPlan: Complete day-by-day itinerary with all selections
+- State: LangGraph workflow state management
+- Context: Trip planning parameters and traveler information
+"""
 from __future__ import annotations
 
 from datetime import date
@@ -20,7 +34,26 @@ from src.core.types import (
 
 
 class BudgetEstimate(BaseModel):
-    """Budget breakdown covering all major travel cost categories."""
+    """AI-generated budget breakdown covering all major travel cost categories.
+    
+    This model represents a comprehensive budget estimate created by the budget
+    estimation agent based on destination, dates, group composition, and preferences.
+    It provides both qualitative (budget level) and quantitative (specific amounts)
+    budget guidance for the trip.
+    
+    Attributes:
+        budget_level: Qualitative budget indicator ($, $$, $$$, $$$$)
+        currency: ISO currency code for all monetary amounts
+        intercity_transport: Budget for flights, trains, buses between cities
+        local_transport: Budget for local transportation (taxis, metro, etc.)
+        food: Budget for meals, drinks, and dining experiences
+        activities: Budget for attractions, tours, entertainment
+        lodging: Budget for accommodation costs
+        other: Miscellaneous expenses (souvenirs, tips, etc.)
+        budget_per_day: Average daily budget across all categories
+        notes: Assumptions, rationale, and context for the budget
+        total: Computed total budget (sum of all categories)
+    """
     budget_level: Optional[Literal["$", "$$", "$$$", "$$$$"]] = Field(
         default=None, description="Qualitative budget level"
     )
@@ -69,13 +102,31 @@ class ResearchPlan(BaseModel):
     food_candidates: Optional[CandidateResearch] = None
     intercity_transport_candidates: Optional[CandidateResearch] = None
     local_transport_candidates: Optional[CandidateResearch] = None
-    recommendations: Optional[CandidateResearch] = None
 
     model_config = ConfigDict(extra="forbid")
 
 
 class CandidateBase(BaseModel):
-    """Common attributes shared by all researched trip candidates."""
+    """Base class for all researched trip candidates with common attributes.
+    
+    This abstract base class defines the common structure for all candidate objects
+    (lodging, activities, food, transport) researched by the AI agents. It includes
+    standard attributes like identification, location, pricing, ratings, and metadata.
+    
+    Attributes:
+        id: Unique identifier (extracted from external APIs like TripAdvisor)
+        name: Display name of the candidate option
+        address: Physical address or location description
+        price_level: Qualitative price indicator ($, $$, $$$, $$$$)
+        rating: Numerical rating (typically 1-5 scale)
+        reviews: List of review excerpts or summaries
+        photos: URLs to representative images
+        url: Link to more information (e.g., TripAdvisor page)
+        lat/lon: Geographic coordinates for mapping
+        evidence_score: Confidence score (0-1) for the research quality
+        source_id: Identifier from the source system (e.g., "tripadvisor")
+        notes: Additional context or important information
+    """
     id: Optional[str] = None
     name: str
     address: Optional[str] = None
@@ -238,7 +289,31 @@ class OutputSchema(BaseModel):
 
 
 class State(BaseModel):
-    """Graph state that flows between LangGraph nodes during execution."""
+    """LangGraph workflow state that flows between nodes during execution.
+    
+    This model represents the complete state of the trip planning workflow as it
+    progresses through different stages. It accumulates data from each agent and
+    serves as the central data structure for the entire planning process.
+    
+    The state evolves through these stages:
+    1. Initial: Contains only messages and destination coordinates
+    2. Budget Planning: Adds estimated_budget and research_plan
+    3. Research Phase: Populated with agent outputs (lodging, activities, etc.)
+    4. Human Review: Contains interrupt data for user selections
+    5. Final Planning: Includes final_plan with complete itinerary
+    
+    Attributes:
+        messages: LangChain message history for conversation tracking
+        destination_coordinates: Geographic coordinates of the destination
+        estimated_budget: AI-generated budget breakdown by category
+        research_plan: Strategy for research agent candidate gathering
+        lodging: Results from lodging research agent
+        activities: Results from activities research agent
+        food: Results from food research agent
+        intercity_transport: Results from transport research agent
+        recommendations: Travel advice and cultural information
+        final_plan: Complete day-by-day itinerary (final stage)
+    """
     messages: Annotated[List[AnyMessage], add_messages]
     destination_coordinates: Optional[str] = None
     estimated_budget: Optional[BudgetEstimate] = None

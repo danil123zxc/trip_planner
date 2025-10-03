@@ -186,10 +186,13 @@ class RetrievalPipeline:
 
         description = description or "Search the persisted vector store for trip research."
 
-        async def _run(params) -> List[Document]:  # type: ignore[override]
-            top_n = params.get("top_n", 10)
-            k = params.get("k", 20)
-            return await self.search_db(params["query"], top_n=top_n, prefilter_k=k)
+        def _run(params) -> List[Document]:  # type: ignore[override]
+            async def _async_run() -> List[Document]:
+                top_n = params.get("top_n", 10)
+                k = params.get("k", 20)
+                return await self.search_db(params["query"], top_n=top_n, prefilter_k=k)
+            
+            return asyncio.run(_async_run())
 
         return Tool(
             name=name,

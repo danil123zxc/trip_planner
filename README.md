@@ -1,120 +1,350 @@
-# Trip Planner
+# Trip Planner - AI-Powered Travel Planning Platform
 
-Trip Planner is an agentic travel planning platform built around a LangGraph workflow. The system coordinates multiple research agents (lodging, activities, food, transport, and advisory) to assemble a day-by-day itinerary, supports human-in-the-loop decisions, and exposes the workflow through a FastAPI service.
+A comprehensive full-stack travel planning application that uses AI agents to create personalized itineraries. The system combines LangGraph workflows, FastAPI backend, and a modern React frontend to deliver intelligent trip planning with human-in-the-loop decision making.
 
-Start from `trip_planner.ipynb` to understand the workflow.
+## 🌟 Features
 
-## Key Capabilities
+- **AI-Powered Planning**: Uses LangGraph to coordinate multiple specialized agents for comprehensive trip planning
+- **Interactive Web Interface**: Modern React frontend with responsive design and real-time updates
+- **Human-in-the-Loop**: Allows users to make decisions during the planning process
+- **Multi-Agent Architecture**: Specialized agents for lodging, activities, food, transport, and recommendations
+- **Retrieval-Augmented Research**: RAG pipeline with internet search, Reddit integration, and vector store search
+- **Budget Estimation**: Intelligent budget breakdown across all travel categories
+- **Real-time Results**: Live updates as the planning process progresses
 
-- **LangGraph Orchestration** - stateful workflow that estimates budget, plans research, fans out to specialised agents, and synthesises a final itinerary.
-- **Retrieval-Augmented Research** - shared RAG pipeline that powers internet, Reddit, and internal vector store search tools.
-- **Human-in-the-Loop** - interrupt nodes pause execution so users can choose preferred options or adjust research plans before resuming.
-- **Extensible API Layer** - `/plan/start` and `/plan/resume/{thread_id}` endpoints wrap the notebook logic for production use.
-- **Modular Codebase** - reusable helpers live under `src/` and are covered by unit tests in `tests/`.
+## 🏗️ Architecture
 
-## Repository Layout
+The application consists of three main components:
 
-- `trip_planner.ipynb` - canonical notebook describing the end-to-end flow
-- `src/` - Python modules extracted from the notebook
-  - `api/` - FastAPI application (start/resume endpoints)
-  - `core/` - Pydantic models, shared domain types, config
-  - `pipelines/` - Retrieval pipeline assembly
-  - `services/` - External integrations (TripAdvisor, Amadeus, geocoding)
-  - `tools/` - Search tools wired into the agents
-  - `workflows/` - LangGraph nodes and compilation helpers
-- `tests/` - Pytest suite (domain, services, workflow, API)
-- `docs/` - Feature-sliced architecture documentation
-- `data/` - Shared datasets (create as needed)
-- `artifacts/` - Generated maps, CSVs, cached runs (git-ignored)
+1. **Jupyter Notebook** (`trip_planner.ipynb`) - Core workflow implementation and development environment
+2. **Backend API** (Python/FastAPI) - Production API server with LangGraph integration
+3. **Frontend** (React/TypeScript) - User interface for trip planning and results
 
-## Prerequisites
+### System Flow
 
-- Python 3.12
-- Access tokens for external services:
-  - `OPENAI_API_KEY`
-  - `TAVILY_API_KEY`
-  - `XAI_API_KEY` (xAI Grok models)
-  - `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET`
-  - `TRIP_ADVISOR_API_KEY`
-  - `AMADEUS_API_KEY` / `AMADEUS_API_SECRET`
-
-Set these values in `.env` or your shell before running the API or notebook.
-
-## Environment Setup
-
-```bash
-python -m venv .venv
-source .venv/bin/activate      # or .venv\Scripts\activate on Windows
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+```mermaid
+graph TD
+    A[User Input] --> B[React Frontend]
+    B --> C[FastAPI Backend]
+    C --> D[LangGraph Workflow]
+    D --> E[Budget Agent]
+    D --> F[Research Plan Agent]
+    F --> G[Lodging Agent]
+    F --> H[Activities Agent]
+    F --> I[Food Agent]
+    F --> J[Transport Agent]
+    G --> K[Planner Agent]
+    H --> K
+    I --> K
+    J --> K
+    K --> L[Final Itinerary]
+    L --> B
 ```
 
-After modifying dependencies, refresh the lock file: `pip freeze > requirements.txt`.
+## 🚀 Quick Start
 
-## Running the Notebook
+### Prerequisites
 
-1. Launch Jupyter Lab: `jupyter lab`
-2. Open `trip_planner.ipynb`
-3. Ensure environment variables are loaded (see `.env`)
-4. Execute cells top-to-bottom. Before committing, verify with:
+- **Python 3.12+**
+- **Node.js 16+**
+- **npm or yarn**
+- **API Keys** for external services (see Environment Setup)
+
+### Environment Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd trip_planner
+   ```
+
+2. **Create environment file**:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Configure API keys** in `.env`:
+   ```env
+   # Required for core functionality
+   OPENAI_API_KEY=your_openai_key
+   TAVILY_API_KEY=your_tavily_key
+   
+   # Optional but recommended
+   REDDIT_CLIENT_ID=your_reddit_client_id
+   REDDIT_CLIENT_SECRET=your_reddit_client_secret
+   TRIP_ADVISOR_API=your_tripadvisor_key
+   AMADEUS_API=your_amadeus_key
+   AMADEUS_SECRET=your_amadeus_secret
+   XAI_API_KEY=your_xai_key
+   
+   # Optional for tracing
+   LANGCHAIN_API_KEY=your_langsmith_key
+   ```
+
+### Installation & Setup
+
+#### Backend Setup
+
+1. **Create virtual environment**:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Start the backend**:
+   ```bash
+   uvicorn src.api.app:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+#### Frontend Setup
+
+1. **Navigate to frontend directory**:
+   ```bash
+   cd frontend
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start the frontend**:
+   ```bash
+   npm start
+   ```
+
+4. **Access the application**:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+
+## 📖 Usage
+
+### Web Interface
+
+1. **Open the application** at http://localhost:3000
+2. **Fill out the trip form** with:
+   - Destination and dates
+   - Budget and currency
+   - Traveler information
+   - Trip preferences
+3. **Submit to start planning** - the AI agents will begin research
+4. **Make selections** when prompted for human input
+5. **Review final itinerary** with day-by-day breakdown
+
+### API Usage
+
+#### Start Planning
+```bash
+curl -X POST "http://localhost:8000/plan/start" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context": {
+      "destination": "Paris, France",
+      "date_from": "2024-06-01",
+      "date_to": "2024-06-05",
+      "budget": 2000,
+      "currency": "USD",
+      "group_type": "couple",
+      "travellers": [
+        {
+          "name": "John Doe",
+          "date_of_birth": "1990-01-01"
+        }
+      ]
+    }
+  }'
+```
+
+#### Resume Planning
+```bash
+curl -X POST "http://localhost:8000/plan/resume/{thread_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "selections": {
+      "lodging": 0,
+      "activities": [0, 1, 2],
+      "food": [0, 1],
+      "transport": 0
+    }
+  }'
+```
+
+## 🧪 Development
+
+### Project Structure
+
+```
+trip_planner/
+├── trip_planner.ipynb          # Core workflow implementation
+├── src/                        # Backend Python modules
+│   ├── api/                    # FastAPI application
+│   ├── core/                   # Domain models and configuration
+│   ├── pipelines/              # RAG pipeline implementation
+│   ├── services/               # External API integrations
+│   ├── tools/                  # Search and research tools
+│   └── workflows/              # LangGraph nodes and compilation
+├── frontend/                   # React frontend application
+│   ├── src/
+│   │   ├── components/         # React components
+│   │   ├── hooks/              # Custom React hooks
+│   │   ├── services/           # API services
+│   │   └── types/              # TypeScript definitions
+│   └── package.json
+├── tests/                      # Test suite
+├── docs/                       # Documentation
+└── docker-compose.yml          # Container orchestration
+```
+
+### Development Workflow
+
+1. **Start with the notebook**: Implement new features in `trip_planner.ipynb` first
+2. **Test thoroughly**: Ensure all cells execute without errors:
    ```bash
    jupyter nbconvert --execute --to notebook --inplace trip_planner.ipynb
    ```
+3. **Extract to modules**: Move stable logic to appropriate `src/` modules
+4. **Update tests**: Add tests for new functionality
+5. **Sync implementations**: Ensure notebook and Python code remain synchronized
 
-## FastAPI Service
-
-### Start the API
-
-```bash
-source .venv/bin/activate
-uvicorn src.api.app:app --reload
-```
-
-### Endpoints
-
-- `POST /plan/start`
-  - Body: `context` (trip configuration), optional `thread_id`, optional `user_prompt`
-  - Returns: planning status (`interrupt`, `complete`, `needs_follow_up`, `no_plan`), LangGraph config, agent outputs, and interrupt payload when human input is required.
-
-- `POST /plan/resume/{thread_id}`
-  - Body: optional `config`, `selections` (indexes of chosen options), optional `research_plan` overrides.
-  - Uses stored state to resume the graph and returns updated status and payloads.
-
-- `GET /health`
-  - Simple readiness probe.
-
-### Human-in-the-Loop Flow
-
-1. Call `/plan/start` with a trip context.
-2. If `status` is `interrupt`, inspect `interrupt` for pending selections, gather a user decision, and send `/plan/resume/{thread_id}` with the indices.
-3. Repeat resume calls until status becomes `complete` (final itinerary) or `no_plan`.
-
-## Testing
+### Running Tests
 
 ```bash
-source .venv/bin/activate
-pytest
+# Backend tests
+pytest tests/ -v
+
+# Frontend tests
+cd frontend && npm test
+
+# Notebook validation
+pytest --nbmake trip_planner.ipynb
 ```
 
-The test suite covers:
-- Domain model validation (`tests/test_domain.py`)
-- External service helpers (`tests/test_services.py`)
-- LangGraph node behaviour and compilation (`tests/test_workflow_nodes.py`)
-- API contract using a stubbed workflow bundle (`tests/test_api.py`)
+### Code Quality
 
-## Development Guidelines
+- Follow PEP 8 conventions for Python code
+- Use TypeScript strict mode for frontend code
+- Maintain comprehensive test coverage
+- Keep notebook and Python implementations synchronized
 
-- Follow PEP 8 conventions and favour small, well-named helper functions.
-- When notebook logic stabilises, extract shared code into `src/` modules with short docstrings.
-- Keep generated data in `artifacts/` and shared datasets in `data/`.
-- Mark long-running notebook cells with `@pytest.mark.slow` (see testing guidelines).
+## 🐳 Docker Deployment
 
-## Observability & Tracing
+### Development with Docker
 
-`ApiSettings` can enable LangSmith tracing if `LANGSMITH_API_KEY` is provided. Review `src/core/config.py` for configuration defaults and environment variable loading.
+```bash
+# Build and start all services
+docker-compose up --build
 
-## Next Steps
+# Run tests in container
+docker-compose run tests
+```
 
-- Extend RAG sources or agents as new travel domains emerge.
-- Automate interrupt handling with UX surfaces (chat UI, dashboard).
-- Integrate additional testing (e.g., `pytest --nbmake trip_planner.ipynb`).
+### Production Deployment
+
+```bash
+# Build production images
+docker build -t trip-planner-app .
+
+# Run with environment variables
+docker run -p 8000:8000 --env-file .env trip-planner-app
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | Yes | OpenAI API key for LLM functionality |
+| `TAVILY_API_KEY` | Yes | Tavily API key for internet search |
+| `REDDIT_CLIENT_ID` | No | Reddit API client ID |
+| `REDDIT_CLIENT_SECRET` | No | Reddit API client secret |
+| `TRIP_ADVISOR_API` | No | TripAdvisor API key |
+| `AMADEUS_API` | No | Amadeus API key for flights |
+| `AMADEUS_SECRET` | No | Amadeus API secret |
+| `XAI_API_KEY` | No | xAI API key for Grok models |
+| `LANGCHAIN_API_KEY` | No | LangSmith API key for tracing |
+
+### API Configuration
+
+The API can be configured through environment variables or the `ApiSettings` class in `src/core/config.py`. Key settings include:
+
+- Model selection and parameters
+- Rate limiting and timeouts
+- Logging and tracing configuration
+- External service endpoints
+
+## 📊 Monitoring & Observability
+
+### LangSmith Tracing
+
+Enable tracing by setting `LANGCHAIN_API_KEY` in your environment. This provides:
+
+- Complete workflow execution traces
+- Agent performance metrics
+- Token usage tracking
+- Error analysis and debugging
+
+### Logging
+
+The application uses structured logging throughout:
+
+- API request/response logging
+- Agent execution logs
+- Error tracking and debugging
+- Performance metrics
+
+## 🤝 Contributing
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make your changes**:
+   - Start with notebook implementation
+   - Extract to Python modules
+   - Add comprehensive tests
+   - Update documentation
+4. **Test thoroughly**:
+   ```bash
+   pytest tests/ -v
+   jupyter nbconvert --execute --to notebook --inplace trip_planner.ipynb
+   ```
+5. **Commit your changes**: `git commit -m 'Add amazing feature'`
+6. **Push to the branch**: `git push origin feature/amazing-feature`
+7. **Open a Pull Request**
+
+### Development Guidelines
+
+- **Notebook First**: Always implement new features in the notebook first
+- **Test Coverage**: Maintain comprehensive test coverage
+- **Documentation**: Update relevant documentation
+- **Code Review**: Ensure Python implementation matches notebook logic
+- **Synchronization**: Keep notebook and Python code in sync
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: Check the `docs/` directory for detailed guides
+- **Issues**: Report bugs and feature requests via GitHub issues
+- **Discussions**: Join community discussions for questions and ideas
+
+## 🔮 Roadmap
+
+- [ ] Enhanced mobile experience
+- [ ] Real-time collaboration features
+- [ ] Advanced budget optimization
+- [ ] Integration with more travel services
+- [ ] Multi-language support
+- [ ] Offline functionality
+- [ ] Advanced analytics and insights
+
+---
+
+**Built with ❤️ using LangGraph, FastAPI, and React**
