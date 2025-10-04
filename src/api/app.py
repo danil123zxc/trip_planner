@@ -73,21 +73,21 @@ class PlanRequest(BaseModel):
 class ResumeSelections(BaseModel):
     """Indices of options chosen during human-in-the-loop review."""
 
-    lodging: Optional[CandidateLodging] = Field(
+    lodging: Optional[int] = Field(
         default=None,
-        description="Candidate of the selected lodging option (0-based).",
+        description="Index of the selected lodging option (0-based).",
     )
-    intercity_transport: Optional[CandidateIntercityTransport] = Field(
+    intercity_transport: Optional[int] = Field(
         default=None,
-        description="Candidate of the selected intercity transport option.",
+        description="Index of the selected intercity transport option (0-based).",
     )
-    activities: Optional[List[CandidateActivity]] = Field(
+    activities: Optional[List[int]] = Field(
         default=None,
-        description="Candidates of activity options to keep. Empty list means keep all.",
+        description="Indices of activity options to keep. Empty list means keep all.",
     )
-    food: Optional[List[CandidateFood]] = Field(
+    food: Optional[List[int]] = Field(
         default=None,
-        description="Candidates of food options to keep. Empty list means keep all.",
+        description="Indices of food options to keep. Empty list means keep all.",
     )
 
 
@@ -295,7 +295,7 @@ class WorkflowBundle:
         if research_plan:
             payload["research_plan"] = research_plan.model_dump(exclude_none=True)
 
-        def resolve_options(key: str, attr: str) -> List[Any]: 
+        def resolve_options(key: str) -> List[Any]: 
             """Extract candidate options from stored agent output.
             
             Args:
@@ -308,18 +308,33 @@ class WorkflowBundle:
             output = state.get(key)
             if output is None:
                 return []
-            options = getattr(output, attr, None)
-            return list(options or [])
+            # options = getattr(output, attr, None)
+            return list(output)
 
         # Process single selections (lodging, transport) - user picks one option
+        # single_map = {
+        #     "lodging": ("lodging", selections.lodging),
+        #     "intercity_transport": ("transport", selections.intercity_transport),
+        # }
         single_map = {
-            "lodging": ("lodging", selections.lodging),
-            "intercity_transport": ("transport", selections.intercity_transport),
+            "lodging": selections.lodging, 
+            "intercity_transport": selections.intercity_transport
         }
-        for key, (attr, index) in single_map.items():
+        # for key, (attr, index) in single_map.items():
+        #     if index is None:
+        #         continue
+        #     options = resolve_options(key, attr)
+        #     if not options:
+        #         raise RuntimeError(f"No options stored for '{key}' to select from.")
+        #     if index < 0 or index >= len(options):
+        #         raise RuntimeError(f"Selection index {index} is out of range for '{key}'.")
+        #     # Convert selected option to dictionary for LangGraph processing
+        #     payload[key] = options[index].model_dump(exclude_none=True)
+
+        for key, index in single_map.items():
             if index is None:
                 continue
-            options = resolve_options(key, attr)
+            options = resolve_options(key)
             if not options:
                 raise RuntimeError(f"No options stored for '{key}' to select from.")
             if index < 0 or index >= len(options):
@@ -329,32 +344,47 @@ class WorkflowBundle:
 
         # Process multi-selections (activities, food) - user can pick multiple options
         multi_map = {
-            "activities": ("activities", selections.activities),
-            "food": ("food", selections.food),
+            "activities": selections.activities,
+            "food":selections.food,
         }
-        for key, (attr, indices) in multi_map.items():
+        # for key, (attr, indices) in multi_map.items():
+        #     if indices is None:
+        #         continue
+        #     options = resolve_options(key, attr)
+        #     if not options:
+        #         raise RuntimeError(f"No options stored for '{key}' to select from.")
+            
+        #     if indices:
+        #         # User selected specific indices - filter to those options
+        #         selected = []
+        #         for idx in indices:
+        #             if idx < 0 or idx >= len(options):
+        #                 raise RuntimeError(
+        #                     f"Selection index {idx} is out of range for '{key}'."
+        #                 )
+        #             selected.append(options[idx])
+        #     else:
+        #         # No specific selections - include all options
+        #         selected = options
+            
+        #     # Convert all selected options to dictionaries for LangGraph processing
+        #     dumps = [item.model_dump(exclude_none=True) for item in selected]
+        #     payload[key] = dumps[0] if len(dumps) == 1 else dumps
+        for key, indices in multi_map.items():
             if indices is None:
                 continue
-            options = resolve_options(key, attr)
+            options = resolve_options(key)
             if not options:
                 raise RuntimeError(f"No options stored for '{key}' to select from.")
-            
+            selected = []
             if indices:
-                # User selected specific indices - filter to those options
-                selected = []
                 for idx in indices:
                     if idx < 0 or idx >= len(options):
-                        raise RuntimeError(
-                            f"Selection index {idx} is out of range for '{key}'."
-                        )
+                        raise RuntimeError(f"Selection index {idx} is out of range for '{key}'.")
                     selected.append(options[idx])
-            else:
-                # No specific selections - include all options
-                selected = options
-            
-            # Convert all selected options to dictionaries for LangGraph processing
+      
             dumps = [item.model_dump(exclude_none=True) for item in selected]
-            payload[key] = dumps[0] if len(dumps) == 1 else dumps
+            payload[key] = dumps
 
         return payload
 
@@ -689,7 +719,7 @@ async def start_planning(payload: PlanRequest) -> PlanningResponse:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return _result_to_response(config, result)
-
+    
 
 @app.post("/plan/resume", response_model=PlanningResponse)
 async def resume_planning(payload: ResumeRequest) -> PlanningResponse:

@@ -187,6 +187,9 @@ def make_lodging_node(agent: AgentExecutor):
 
         Candidates research details: {candidates}
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
+
+        IMPORTANT: When creating lodging candidates, use the 'location_id' from the API responses as the 'id' field. 
+       
         """
         response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
         default = LodgingAgentOutput(lodging=[])
@@ -210,6 +213,9 @@ def make_activities_node(agent: AgentExecutor):
 
         Candidates research details: {candidates}
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
+
+        IMPORTANT: When creating activity candidates, use the 'location_id' from the API responses as the 'id' field. 
+        
         """
         response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
         default = ActivitiesAgentOutput(activities=[])
@@ -233,6 +239,9 @@ def make_food_node(agent: AgentExecutor):
 
         Candidates research details: {candidates}
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
+
+        IMPORTANT: When creating food candidates, use the 'location_id' from the API responses as the 'id' field. 
+       
         """
         response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
         default = FoodAgentOutput(food=[])

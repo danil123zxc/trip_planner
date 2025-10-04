@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlanningResponse, CandidateLodging, CandidateActivity, CandidateFood, CandidateIntercityTransport } from '../types/api';
+import { PlanningResponse } from '../types/api';
 
 interface PlanningResultsProps {
   response: PlanningResponse;

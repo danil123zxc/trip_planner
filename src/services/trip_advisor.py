@@ -22,10 +22,11 @@ Key components:
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List, Literal, Optional
+import json
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import httpx
-from langchain_core.tools import Tool
+from langchain_core.tools import Tool, StructuredTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.config import ApiSettings
@@ -519,151 +520,7 @@ def create_trip_advisor_tools(client: TripAdvisor) -> Dict[str, Tool]:
         - comprehensive_search_tool: Perform complete search with details/photos/reviews
     """
 
-    def location_search(params: dict[str, Any]) -> Any:
-        """Search TripAdvisor for locations matching the provided query.
-        
-        This tool searches TripAdvisor's database for locations (restaurants, hotels,
-        attractions, etc.) that match the given search criteria.
-        
-        Args:
-            params: Dictionary containing search parameters:
-                - searchQuery (str): The search query (e.g., "restaurants in Tokyo")
-                - latLong (str, optional): Latitude,longitude for location-based search
-                - category (str, optional): Filter by type ("attractions", "restaurants", "geos", "hotels")
-                - phone (str, optional): Filter by phone number
-                - address (str, optional): Filter by address
-                - radius (int, optional): Search radius (requires latLong)
-                - radiusUnit (str, optional): Unit for radius ("km", "mi", "m")
-                - language (str, optional): Response language (default: "en")
-        
-        Returns:
-            LocationOutput: Contains list of matching locations with basic information
-            
-        Example:
-            params = {
-                "searchQuery": "restaurants in Tokyo",
-                "category": "restaurants",
-                "language": "en"
-            }
-        """
-        return asyncio.run(client.search_location(SearchLocation(**params)))
-
-    def location_details(params: dict[str, Any]) -> Any:
-        """Get detailed information for a specific TripAdvisor location.
-        
-        Retrieves comprehensive details about a location including description,
-        contact information, ratings, pricing, and more.
-        
-        Args:
-            params: Dictionary containing location parameters:
-                - locationId (str): TripAdvisor location ID (required)
-                - language (str, optional): Response language (default: "en")
-                - currency (str, optional): Currency for pricing (default: "USD")
-        
-        Returns:
-            DetailsOutput: Detailed location information including:
-                - Basic info (name, description, address)
-                - Contact details (website, phone)
-                - Ratings and pricing information
-                - Geographic coordinates
-        
-        Example:
-            params = {
-                "locationId": "123456",
-                "language": "en",
-                "currency": "USD"
-            }
-        """
-        return asyncio.run(client.location_details(LocationDetails(**params)))
-
-    def location_photos(params: dict[str, Any]) -> Any:
-        """Retrieve photos for a specific TripAdvisor location.
-        
-        Gets a collection of photos associated with a location, including
-        captions, dimensions, and direct URLs to images.
-        
-        Args:
-            params: Dictionary containing photo parameters:
-                - locationId (str): TripAdvisor location ID (required)
-                - language (str, optional): Response language (default: "en")
-                - limit (int, optional): Maximum number of photos to return
-                - offset (int, optional): Number of photos to skip
-        
-        Returns:
-            PhotosOutput: Collection of photo data including:
-                - Photo URLs and dimensions
-                - Captions and publication dates
-                - Photo metadata
-        
-        Example:
-            params = {
-                "locationId": "123456",
-                "limit": 10,
-                "offset": 0
-            }
-        """
-        return asyncio.run(client.location_photos(LocationPhotos(**params)))
-
-    def location_reviews(params: dict[str, Any]) -> Any:
-        """Get reviews for a specific TripAdvisor location.
-        
-        Retrieves user reviews and ratings for a location, including
-        review text, ratings, and reviewer information.
-        
-        Args:
-            params: Dictionary containing review parameters:
-                - locationId (str): TripAdvisor location ID (required)
-                - language (str, optional): Response language (default: "en")
-                - limit (int, optional): Maximum number of reviews to return
-                - offset (int, optional): Number of reviews to skip
-        
-        Returns:
-            ReviewOutput: Collection of review data including:
-                - Review text and ratings
-                - Reviewer information
-                - Publication dates and trip types
-                - Review URLs
-        
-        Example:
-            params = {
-                "locationId": "123456",
-                "limit": 20,
-                "language": "en"
-            }
-        """
-        return asyncio.run(client.location_reviews(LocationReviews(**params)))
-
-    def nearby_search(params: dict[str, Any]) -> Any:
-        """Find nearby places relative to a specific location.
-        
-        Searches for locations within a specified radius of given coordinates,
-        useful for finding nearby restaurants, attractions, or services.
-        
-        Args:
-            params: Dictionary containing search parameters:
-                - latLong (str): Latitude,longitude coordinates (required)
-                - category (str, optional): Filter by type ("attractions", "restaurants", "geos", "hotels")
-                - radius (int, optional): Search radius (required for meaningful results)
-                - radiusUnit (str, optional): Unit for radius ("km", "mi", "m")
-                - language (str, optional): Response language (default: "en")
-        
-        Returns:
-            NearbySearchOutput: List of nearby locations with:
-                - Location details and addresses
-                - Distance and bearing from center point
-                - Basic location information
-        
-        Example:
-            params = {
-                "latLong": "35.6762,139.6503",
-                "category": "restaurants",
-                "radius": 1,
-                "radiusUnit": "km"
-            }
-        """
-        return asyncio.run(client.nearby_search(NearbySearch(**params)))
-
-    def comprehensive(search_input: ComprehensiveLocationInput) -> Any:
+    def comprehensive(**kwargs) -> Any:
         """Perform comprehensive location search with full details.
         
         This is the most powerful tool that combines search with detailed information
@@ -705,44 +562,23 @@ def create_trip_advisor_tools(client: TripAdvisor) -> Dict[str, Tool]:
                 language="en",
                 currency="USD"
             )
-            comprehensive(search_input)
+            comprehensive(**search_input)
         
         Note:
             This tool performs multiple API calls per location and may take longer
             to complete than individual search tools. Use limit_locations to control
             processing time and API usage.
         """
-        return asyncio.run(client.comprehensive_search(search_input))
+    
+        return asyncio.run(client.comprehensive_search(ComprehensiveLocationInput(**kwargs)))
 
     return {
-        "location_search_tool": Tool.from_function(
-            location_search,
-            name="location_search_tool",
-            description="Search TripAdvisor for locations matching a query. Use this to find restaurants, hotels, attractions, or other places. Parameters: searchQuery (required), category, latLong, radius, language.",
-        ),
-        "location_details_tool": Tool.from_function(
-            location_details,
-            name="location_details_tool",
-            description="Get comprehensive details for a specific TripAdvisor location including description, contact info, ratings, and pricing. Parameters: locationId (required), language, currency.",
-        ),
-        "location_photos_tool": Tool.from_function(
-            location_photos,
-            name="location_photos_tool",
-            description="Retrieve photos for a TripAdvisor location with captions and metadata. Parameters: locationId (required), language, limit, offset.",
-        ),
-        "location_reviews_tool": Tool.from_function(
-            location_reviews,
-            name="location_reviews_tool",
-            description="Get user reviews and ratings for a TripAdvisor location. Parameters: locationId (required), language, limit, offset.",
-        ),
-        "nearby_search_tool": Tool.from_function(
-            nearby_search,
-            name="nearby_search_tool",
-            description="Find places near specific coordinates within a radius. Great for finding nearby restaurants, attractions, or services. Parameters: latLong (required), category, radius, radiusUnit, language.",
-        ),
-        "comprehensive_search_tool": Tool.from_function(
+        "comprehensive_search_tool": StructuredTool.from_function(
             comprehensive,
             name="comprehensive_search_tool",
             description="Perform complete location research: search + details + photos + reviews in one operation. Most comprehensive but slower. Input: ComprehensiveLocationInput object with searchQuery (required) and optional parameters: latLong, category (attractions/restaurants/geos/hotels), phone, address, radius, radiusUnit (km/mi/m), language (default: en), limit_locations (default: 5), photos_limit (default: 10), reviews_limit (default: 10), currency (default: USD), offset_photos, offset_reviews.",
+            args_schema=ComprehensiveLocationInput,
         ),
     }
+
+

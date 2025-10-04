@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { TripFormData, Traveller } from '../types/api';
+import { TripFormData } from '../types/api';
 
 interface TripFormProps {
   onSubmit: (data: TripFormData) => void;

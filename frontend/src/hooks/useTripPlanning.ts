@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { tripPlanningApi } from '../services/api';
-import { PlanRequest, PlanningResponse, ResumeRequest, PlanningState } from '../types/api';
+import { PlanRequest, ResumeRequest, PlanningState } from '../types/api';
 
 export const useTripPlanning = () => {
   const [state, setState] = useState<PlanningState>({

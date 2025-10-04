@@ -124,7 +124,7 @@ function App() {
                 response={state.data}
                 onConfirm={handleSelectionConfirm}
                 onCancel={handleStartOver}
-                isLoading={state.status === 'loading'}
+                isLoading={false}
               />
             ) : (
               <PlanningResults response={state.data} />
