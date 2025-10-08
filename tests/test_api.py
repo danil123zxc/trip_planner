@@ -268,7 +268,6 @@ def test_plan_resume_returns_final_plan(client: TestClient, stub_bundle: StubBun
 
     resume_payload = {
         "config": config,
-        "context": context_payload,
         "selections": {
             "lodging": 0,
             "intercity_transport": 0

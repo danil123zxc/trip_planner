@@ -283,8 +283,8 @@ class WorkflowBundle:
     async def resume_trip(
         self,
         *,
-        context: Context,
-        config: Optional[Dict[str, Any]],
+        context: Optional[Context]=None,
+        config: Dict[str, Any],
         selections: ResumeSelections,
         research_plan: Optional[Dict[str, CandidateResearch]],
     ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
@@ -313,18 +313,16 @@ class WorkflowBundle:
             - Thread state is restored from _pending_states for existing threads
             - Selections are applied to filter candidate options
         """
-        thread_id = None
-        if config:
-            configurable = config.get("configurable", {})
-            thread_id = configurable.get("thread_id")
+      
+        configurable = config.get("configurable", {})
+        thread_id = configurable.get("thread_id")
 
         if not thread_id:
             raise RuntimeError("Resume config must include configurable.thread_id.")
 
-        if thread_id not in self._contexts:
+        if thread_id not in self._contexts: 
             raise RuntimeError(f"Unknown planning thread '{thread_id}'.")
         else:
-            thread_id = f"trip_{uuid4()}"
             # Store context for new thread when config is not provided
             self._contexts[thread_id] = context
             # Clear any existing state for this thread
@@ -343,5 +341,6 @@ class WorkflowBundle:
         command = Command(resume=resume_payload)
         result = await self.graph.ainvoke(command, context=context, config=active_config)
         self._store_result(thread_id, result)
+
         return active_config, result
 
