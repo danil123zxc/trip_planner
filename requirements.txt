@@ -21,3 +21,6 @@ transformers>=4.35.0
 torch>=2.0.0
 amadeus>=8.0.0
 python-multipart>=0.0.6
+sentry-sdk[fastapi]>=2.20.0
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
