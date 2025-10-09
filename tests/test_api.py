@@ -143,6 +143,7 @@ class StubBundle:
         self.resume_trip_inputs: List[Any] = []
         self.plan_trip_result = self._default_plan_trip_result()
         self.resume_trip_result = self._default_resume_result()
+        self._thread_contexts: Dict[str, Any] = {}
 
     def _default_plan_trip_result(self) -> Any:
         config = {"recursion_limit": 100, "configurable": {"thread_id": self.thread_id}}
@@ -172,6 +173,7 @@ class StubBundle:
 
     async def plan_trip(self, *, context) -> Any:
         self.plan_trip_inputs.append(context)
+        self._thread_contexts[self.thread_id] = context
         return self.plan_trip_result
 
     async def resume_trip(self, *, context, config, selections, research_plan) -> Any:
@@ -180,6 +182,8 @@ class StubBundle:
             thread_id = config.get("configurable", {}).get("thread_id")
         if not thread_id:
             raise RuntimeError("Resume config must include configurable.thread_id.")
+        if context is None:
+            context = self._thread_contexts.get(thread_id)
         self.resume_trip_inputs.append(
             {
                 "context": context,
@@ -189,6 +193,9 @@ class StubBundle:
             }
         )
         return self.resume_trip_result
+
+    def get_thread_context(self, thread_id: str):
+        return self._thread_contexts.get(thread_id)
 
     async def close(self) -> None:
         return None
@@ -268,7 +275,6 @@ def test_plan_resume_returns_final_plan(client: TestClient, stub_bundle: StubBun
 
     resume_payload = {
         "config": config,
-        "context": context_payload,
         "selections": {
             "lodging": 0,
             "intercity_transport": 0

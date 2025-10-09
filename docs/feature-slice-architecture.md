@@ -128,11 +128,11 @@
 ```
 
 **Key Files:**
-- `src/services/amadeus.py`
-- `src/services/trip_advisor.py`
-- `src/services/geocoding.py`
-- `src/tools/internet_search.py`
-- `src/tools/reddit_search.py`
+- `src/services/amadeus/`
+- `src/services/trip_advisor/`
+- `src/services/geocoding/geocoding.py`
+- `src/services/tavily_search/tools.py`
+- `src/services/reddit/tools.py`
 
 ### 6. Configuration Management Slice
 ```

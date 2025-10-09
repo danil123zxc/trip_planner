@@ -1,8 +1,12 @@
 from src.core.config import ApiSettings
-from src.services.amadeus import create_amadeus_client, create_flight_search_tool
-from src.services.trip_advisor import create_trip_advisor_client, create_trip_advisor_tools
-from src.tools.internet_search import create_internet_tool
-from src.tools.reddit_search import create_reddit_tool
+from src.services import (
+    create_amadeus_client,
+    create_flight_search_tool,
+    create_trip_advisor_client,
+    create_trip_advisor_tools,
+    create_internet_tool,
+    create_reddit_tool,
+)
 from src.workflows.planner import build_research_agents, build_research_graph
 from src.api.schemas import ResumeSelections
 from langchain_core.messages import BaseMessage
@@ -99,7 +103,7 @@ class WorkflowBundle:
 
         self.agents = build_research_agents(
             self.llm,
-            comprehensive_search_tool=self.trip_tools["comprehensive_search_tool"],
+            comprehensive_search_tool=self.trip_tools,
             flight_search_tool=self.flight_tool,
             search_tools=[self.search_db_tool, self.reddit_tool, self.internet_tool],
         )
@@ -139,6 +143,11 @@ class WorkflowBundle:
             "recursion_limit": self.recursion_limit,
             "configurable": {"thread_id": thread_id},
         }
+
+    def get_thread_context(self, thread_id: str) -> Optional[Context]:
+        """Return the stored planning context for a thread, if present."""
+
+        return self._contexts.get(thread_id)
 
     def _store_result(self, thread_id: str, result: Mapping[str, Any]) -> None:
         self._pending_states[thread_id] = result
@@ -283,8 +292,8 @@ class WorkflowBundle:
     async def resume_trip(
         self,
         *,
-        context: Context,
-        config: Optional[Dict[str, Any]],
+        context: Optional[Context]=None,
+        config: Dict[str, Any],
         selections: ResumeSelections,
         research_plan: Optional[Dict[str, CandidateResearch]],
     ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
@@ -313,24 +322,25 @@ class WorkflowBundle:
             - Thread state is restored from _pending_states for existing threads
             - Selections are applied to filter candidate options
         """
-        thread_id = None
-        if config:
-            configurable = config.get("configurable", {})
-            thread_id = configurable.get("thread_id")
+      
+        configurable = config.get("configurable", {})
+        thread_id = configurable.get("thread_id")
 
         if not thread_id:
             raise RuntimeError("Resume config must include configurable.thread_id.")
 
         if thread_id not in self._contexts:
             raise RuntimeError(f"Unknown planning thread '{thread_id}'.")
-        else:
-            thread_id = f"trip_{uuid4()}"
-            # Store context for new thread when config is not provided
+
+        stored_context = self._contexts[thread_id]
+        execution_context = context or stored_context
+
+        if execution_context is None:
+            raise RuntimeError(f"No planning context available for thread '{thread_id}'.")
+
+        if context is not None:
             self._contexts[thread_id] = context
-            # Clear any existing state for this thread
-            self._pending_states.pop(thread_id, None)
-            self._pending_interrupts.pop(thread_id, None)
-    
+
         active_config = config or self._make_config(thread_id)
         self._configs[thread_id] = active_config
 
@@ -341,7 +351,12 @@ class WorkflowBundle:
         )
 
         command = Command(resume=resume_payload)
-        result = await self.graph.ainvoke(command, context=context, config=active_config)
+        result = await self.graph.ainvoke(
+            command,
+            context=execution_context,
+            config=active_config,
+        )
         self._store_result(thread_id, result)
+
         return active_config, result
 

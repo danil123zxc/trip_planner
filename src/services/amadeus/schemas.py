@@ -1,14 +1,6 @@
-"""Amadeus flight search integration."""
-from __future__ import annotations
-
 from datetime import date
-from typing import Any, Dict, Optional
-
-from amadeus import Client
-from langchain_core.tools import Tool
+from typing import Optional
 from pydantic import BaseModel, Field, field_serializer
-
-from src.core.config import ApiSettings
 
 
 class FlightSearchInput(BaseModel):
@@ -34,27 +26,3 @@ class FlightSearchInput(BaseModel):
         if value is None:
             return None
         return value.strftime("%Y-%m-%d")
-
-
-def create_amadeus_client(settings: ApiSettings, *, hostname: str = "test") -> Client:
-    """Instantiate the Amadeus SDK client using project configuration."""
-
-    client_id = settings.ensure("amadeus_api_key")
-    client_secret = settings.ensure("amadeus_api_secret")
-    return Client(client_id=client_id, client_secret=client_secret, hostname=hostname)
-
-
-def create_flight_search_tool(client: Client) -> Tool:
-    """Expose the Amadeus flight search as a LangChain tool."""
-
-    def _run(params: Dict[str, Any]) -> Dict[str, Any]:
-        payload = FlightSearchInput(**params)
-        search_params = payload.model_dump(mode="json", exclude_none=True)
-        response = client.shopping.flight_offers_search.get(**search_params)
-        return response.result
-
-    return Tool(
-        name="search_flights",
-        description="Search for flights using the Amadeus flight offers endpoint.",
-        func=_run,
-    )
