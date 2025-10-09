@@ -19,6 +19,7 @@ class ApiSettings:
     amadeus_api_key: Optional[str] = None
     amadeus_api_secret: Optional[str] = None
     xai_api_key: Optional[str] = None
+    langsmith_api_key: Optional[str] = None
 
     @classmethod
     def from_env(cls) -> "ApiSettings":
@@ -34,6 +35,7 @@ class ApiSettings:
             amadeus_api_key=os.getenv("AMADEUS_API"),
             amadeus_api_secret=os.getenv("AMADEUS_SECRET"),
             xai_api_key=os.getenv("XAI_API_KEY"),
+            langsmith_api_key=os.getenv("LANGCHAIN_API_KEY"),
         )
 
     def ensure(self, field: str) -> str:

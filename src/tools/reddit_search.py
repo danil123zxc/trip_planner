@@ -103,33 +103,36 @@ def create_reddit_tool(settings: ApiSettings, pipeline: RetrievalPipeline) -> To
         description="Search Reddit for travel insights and return reranked documents.",
     )
 
-    async def _run(params: dict[str, Any]) -> List[Document]:
-        data = RedditSearchInput(**params)
-        raw_payload = await reddit_search.arun(
-            RedditSearchSchema(
-                query=data.query,
-                sort=data.sort,
-                time_filter=data.time_filter,
-                subreddit=data.subreddit,
-                limit=str(data.limit),
-            ).model_dump()
-        )
-        documents = parse_reddit_results(raw_payload)
-        if not documents:
-            return []
+    def _run(params: dict[str, Any]) -> List[Document]:
+        async def _async_run() -> List[Document]:
+            data = RedditSearchInput(**params)
+            raw_payload = await reddit_search.arun(
+                RedditSearchSchema(
+                    query=data.query,
+                    sort=data.sort,
+                    time_filter=data.time_filter,
+                    subreddit=data.subreddit,
+                    limit=str(data.limit),
+                ).model_dump()
+            )
+            documents = parse_reddit_results(raw_payload)
+            if not documents:
+                return []
 
-        split_docs = await pipeline.split_docs(documents)
-        filtered = await pipeline.prefilter(data.query, split_docs, k=data.k)
-        if not filtered:
-            return []
+            split_docs = await pipeline.split_docs(documents)
+            filtered = await pipeline.prefilter(data.query, split_docs, k=data.k)
+            if not filtered:
+                return []
 
-        save_task = pipeline.add_unique_documents(filtered)
-        rerank_task = pipeline.rerank(data.query, filtered, top_n=data.top_n)
-        _, reranked = await asyncio.gather(save_task, rerank_task)
-        return reranked
+            save_task = pipeline.add_unique_documents(filtered)
+            rerank_task = pipeline.rerank(data.query, filtered, top_n=data.top_n)
+            _, reranked = await asyncio.gather(save_task, rerank_task)
+            return reranked
+        
+        return asyncio.run(_async_run())
 
     return Tool(
         name="search_reddit",
         description=reddit_search.description or "Search Reddit",
-        coroutine=_run,
+        func=_run,
     )

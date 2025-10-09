@@ -1,11 +1,32 @@
-"""Async TripAdvisor client and related Pydantic models."""
+"""TripAdvisor Content API client and data models for travel research.
+
+This module provides an asynchronous client for the TripAdvisor Content API v1,
+enabling the trip planning system to gather detailed information about:
+- Lodging options (hotels, hostels, B&Bs)
+- Attractions and activities
+- Restaurants and dining options
+- Photos and reviews for locations
+
+The client supports comprehensive location data retrieval including:
+- Location search by query and geographic bounds
+- Detailed location information (ratings, prices, descriptions)
+- Photo galleries with metadata
+- Review aggregation and filtering
+- Nearby search functionality
+
+Key components:
+- TripAdvisor: Main async client class
+- Various data models for API requests/responses
+- Tool creation functions for LangChain integration
+"""
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List, Literal, Optional
+import json
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import httpx
-from langchain_core.tools import Tool
+from langchain_core.tools import Tool, StructuredTool
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.config import ApiSettings
@@ -341,9 +362,13 @@ class TripAdvisor:
         photos: List[PhotosData] = []
         for item in data.get("data", []):
             original = (item.get("images") or {}).get("original") or {}
+            # Debug: Print the actual item structure
+            print(f"DEBUG - Photo item: {item}")
+            # Use the location ID as the photo ID if no specific photo ID exists
+            photo_id = input.locationId
             photos.append(
                 PhotosData(
-                    id=str(item.get("id")),
+                    id=str(photo_id),
                     caption=item.get("caption"),
                     published_date=item.get("published_date"),
                     image=Image(
@@ -362,11 +387,13 @@ class TripAdvisor:
         data = await self._aget(f"{self.api_url}/{input.locationId}/reviews", params)
         reviews: List[ReviewData] = []
         for item in data.get("data", []):
+            # Use the location ID from the input and create review ID based on location
+            review_id = input.locationId
             reviews.append(
                 ReviewData(
-                    id=str(item.get("id")),
+                    id=str(review_id),
                     lang=item.get("lang"),
-                    location_id=str(item.get("location_id")),
+                    location_id=str(input.locationId),  # Use the location ID from the search
                     published_date=item.get("published_date"),
                     rating=item.get("rating"),
                     url=item.get("url"),
@@ -473,55 +500,85 @@ def create_trip_advisor_client(settings: ApiSettings) -> TripAdvisor:
 
 
 def create_trip_advisor_tools(client: TripAdvisor) -> Dict[str, Tool]:
-    """Generate the LangChain tools backed by the TripAdvisor client."""
+    """Generate the LangChain tools backed by the TripAdvisor client.
+    
+    Creates a collection of LangChain tools that wrap the TripAdvisor API client
+    methods, making them available for use in LangChain agents and workflows.
+    
+    Args:
+        client: An initialized TripAdvisor client instance
+        
+    Returns:
+        Dictionary mapping tool names to LangChain Tool objects
+        
+    Tools Created:
+        - location_search_tool: Search for locations by query
+        - location_details_tool: Get detailed information for a location
+        - location_photos_tool: Retrieve photos for a location
+        - location_reviews_tool: Get reviews for a location
+        - nearby_search_tool: Find nearby places by coordinates
+        - comprehensive_search_tool: Perform complete search with details/photos/reviews
+    """
 
-    async def location_search(params: dict[str, Any]) -> Any:
-        return await client.search_location(SearchLocation(**params))
-
-    async def location_details(params: dict[str, Any]) -> Any:
-        return await client.location_details(LocationDetails(**params))
-
-    async def location_photos(params: dict[str, Any]) -> Any:
-        return await client.location_photos(LocationPhotos(**params))
-
-    async def location_reviews(params: dict[str, Any]) -> Any:
-        return await client.location_reviews(LocationReviews(**params))
-
-    async def nearby_search(params: dict[str, Any]) -> Any:
-        return await client.nearby_search(NearbySearch(**params))
-
-    async def comprehensive(params: dict[str, Any]) -> Any:
-        return await client.comprehensive_search(ComprehensiveLocationInput(**params))
+    def comprehensive(**kwargs) -> Any:
+        """Perform comprehensive location search with full details.
+        
+        This is the most powerful tool that combines search with detailed information
+        gathering. It searches for locations and then fetches complete details,
+        photos, and reviews for each result in a single operation.
+        
+        Args:
+            search_input: ComprehensiveLocationInput object containing search parameters:
+                - searchQuery (str): The search query (required)
+                - latLong (str, optional): Latitude,longitude for location-based search
+                - category (str, optional): Filter by type ("attractions", "restaurants", "geos", "hotels")
+                - phone (str, optional): Filter by phone number
+                - address (str, optional): Filter by address
+                - radius (int, optional): Search radius (requires latLong)
+                - radiusUnit (str, optional): Unit for radius ("km", "mi", "m")
+                - language (str, optional): Response language (default: "en")
+                - limit_locations (int, optional): Max locations to process (default: 5)
+                - photos_limit (int, optional): Max photos per location (default: 10)
+                - reviews_limit (int, optional): Max reviews per location (default: 10)
+                - currency (str, optional): Currency for pricing (default: "USD")
+                - offset_photos (int, optional): Photo offset for pagination
+                - offset_reviews (int, optional): Review offset for pagination
+        
+        Returns:
+            List[ComprehensiveLocationResult]: Complete location data including:
+                - Basic location information
+                - Detailed descriptions and contact info
+                - Photo collections with metadata
+                - Review collections with ratings
+                - Error information for failed requests
+        
+        Example:
+            search_input = ComprehensiveLocationInput(
+                searchQuery="cultural attractions in Tokyo",
+                category="attractions",
+                limit_locations=3,
+                photos_limit=15,
+                reviews_limit=20,
+                language="en",
+                currency="USD"
+            )
+            comprehensive(**search_input)
+        
+        Note:
+            This tool performs multiple API calls per location and may take longer
+            to complete than individual search tools. Use limit_locations to control
+            processing time and API usage.
+        """
+    
+        return asyncio.run(client.comprehensive_search(ComprehensiveLocationInput(**kwargs)))
 
     return {
-        "location_search_tool": Tool(
-            name="location_search_tool",
-            description="Search TripAdvisor for matching locations.",
-            coroutine=location_search,
-        ),
-        "location_details_tool": Tool(
-            name="location_details_tool",
-            description="Fetch TripAdvisor details for a location ID.",
-            coroutine=location_details,
-        ),
-        "location_photos_tool": Tool(
-            name="location_photos_tool",
-            description="Retrieve photos for a TripAdvisor location.",
-            coroutine=location_photos,
-        ),
-        "location_reviews_tool": Tool(
-            name="location_reviews_tool",
-            description="Retrieve reviews for a TripAdvisor location.",
-            coroutine=location_reviews,
-        ),
-        "nearby_search_tool": Tool(
-            name="nearby_search_tool",
-            description="Return nearby places for a coordinate pair.",
-            coroutine=nearby_search,
-        ),
-        "comprehensive_search_tool": Tool(
+        "comprehensive_search_tool": StructuredTool.from_function(
+            comprehensive,
             name="comprehensive_search_tool",
-            description="Fetch TripAdvisor details, photos, and reviews in one call.",
-            coroutine=comprehensive,
+            description="Perform complete location research: search + details + photos + reviews in one operation. Most comprehensive but slower. Input: ComprehensiveLocationInput object with searchQuery (required) and optional parameters: latLong, category (attractions/restaurants/geos/hotels), phone, address, radius, radiusUnit (km/mi/m), language (default: en), limit_locations (default: 5), photos_limit (default: 10), reviews_limit (default: 10), currency (default: USD), offset_photos, offset_reviews.",
+            args_schema=ComprehensiveLocationInput,
         ),
     }
+
+

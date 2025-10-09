@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from amadeus import Client
 from langchain_core.tools import Tool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field, field_serializer
 
 from src.core.config import ApiSettings
 
@@ -29,7 +29,11 @@ class FlightSearchInput(BaseModel):
     currencyCode: Optional[str] = Field("USD", description="Currency code")
     max: Optional[int] = Field(10, ge=1, le=50, description="Number of flight offers to return")
 
-    model_config = ConfigDict(json_encoders={date: lambda v: v.strftime("%Y-%m-%d")})
+    @field_serializer("departureDate", "returnDate", when_used="json")
+    def _serialize_dates(self, value: Optional[date], _info) -> Optional[str]:
+        if value is None:
+            return None
+        return value.strftime("%Y-%m-%d")
 
 
 def create_amadeus_client(settings: ApiSettings, *, hostname: str = "test") -> Client:
