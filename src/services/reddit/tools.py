@@ -26,18 +26,18 @@ def create_reddit_tool(settings: ApiSettings, pipeline: RetrievalPipeline) -> To
 
     reddit_search = RedditSearchRun(
         api_wrapper=api_wrapper,
-        description="Search Reddit for travel insights and return reranked documents.",
+        description="Search Reddit for travel insights and return reranked documents. Use RedditSearchInput as input schema.",
     )
 
     async def _arun(**kwargs) -> List[Document]:
-        data = RedditSearchInput(**kwargs)
+        payload = RedditSearchInput(**kwargs)
         raw_payload = await reddit_search.arun(
             RedditSearchSchema(
-                query=data.query,
-                sort=data.sort,
-                time_filter=data.time_filter,
-                subreddit=data.subreddit,
-                limit=str(data.limit),
+                query=payload.query,
+                sort=payload.sort,
+                time_filter=payload.time_filter,
+                subreddit=payload.subreddit,
+                limit=str(payload.limit),
             ).model_dump()
         )
         documents = parse_reddit_results(raw_payload)
@@ -45,12 +45,12 @@ def create_reddit_tool(settings: ApiSettings, pipeline: RetrievalPipeline) -> To
             return []
 
         split_docs = await pipeline.split_docs(documents)
-        filtered = await pipeline.prefilter(data.query, split_docs, k=data.k)
+        filtered = await pipeline.prefilter(payload.query, split_docs, k=payload.k)
         if not filtered:
             return []
 
         save_task = pipeline.add_unique_documents(filtered)
-        rerank_task = pipeline.rerank(data.query, filtered, top_n=data.top_n)
+        rerank_task = pipeline.rerank(payload.query, filtered, top_n=payload.top_n)
         _, reranked = await asyncio.gather(save_task, rerank_task)
         return reranked
 

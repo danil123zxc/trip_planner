@@ -2,7 +2,7 @@
 
 This module concentrates the document splitting, vector-store management,
 FAISS-backed prefiltering, and cross-encoder reranking logic that was scattered
-across the prototype notebook.  Everything is wrapped in `RetrievalPipeline`
+across the prototype notebook. Everything is wrapped in RetrievalPipeline
 so it can be reused from agents, tools, or CLI workflows without relying on
 notebook globals.
 """
@@ -20,9 +20,11 @@ from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from langchain_core.tools import Tool
+from langchain_core.tools import StructuredTool
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from src.pipelines.schemas import SearchDBInput
 
 
 @dataclass(slots=True)
@@ -134,14 +136,18 @@ class RetrievalPipeline:
         if not docs:
             return []
 
-        filtered_store = await FAISS.afrom_documents(docs, 
-                                                    self._embeddings, 
-                                                    normalize_L2=True, 
-                                                    relevance_score_fn=lambda d: float(1.0 / (1.0 + float(d))))
-                                                    
-        score_threshold = {"score_threshold": 0.3}        
-
-        filtered_docs = await filtered_store.asimilarity_search_with_relevance_scores(query, k=k, **score_threshold)
+        filtered_store = await FAISS.afrom_documents(
+            docs,
+            self._embeddings,
+            normalize_L2=True,
+            relevance_score_fn=lambda d: float(1.0 / (1.0 + float(d))),
+        )
+        score_threshold = {"score_threshold": 0.3}
+        filtered_docs = await filtered_store.asimilarity_search_with_relevance_scores(
+            query,
+            k=k,
+            **score_threshold,
+        )
         return [doc for doc, _ in filtered_docs]
 
     async def rerank(
@@ -181,23 +187,25 @@ class RetrievalPipeline:
         _, reranked = await asyncio.gather(save_task, rerank_task)
         return reranked
 
-    def as_tool(self, *, name: str = "search_db", description: Optional[str] = None) -> Tool:
+    def as_tool(self, *, name: str = "search_db", description: Optional[str] = None) -> StructuredTool:
         """Expose the search pipeline as a LangChain retriever tool."""
 
         description = description or "Search the persisted vector store for trip research."
 
-        def _run(params) -> List[Document]:  # type: ignore[override]
-            async def _async_run() -> List[Document]:
-                top_n = params.get("top_n", 10)
-                k = params.get("k", 20)
-                return await self.search_db(params["query"], top_n=top_n, prefilter_k=k)
+  
+        async def _arun(**kwargs) -> List[Document]:
+            payload = SearchDBInput(**kwargs)
+            top_n = payload.top_n
+            k = payload.k
+            query = payload.query
             
-            return asyncio.run(_async_run())
+            return await self.search_db(query, top_n=top_n, prefilter_k=k)
 
-        return Tool(
+        return StructuredTool.from_function(
             name=name,
             description=description,
-            func=_run,
+            coroutine=_arun,
+            args_schema=SearchDBInput,
         )
 
 
