@@ -1,6 +1,11 @@
 # Trip Planner - AI-Powered Travel Planning Platform
 
-A comprehensive full-stack travel planning application that uses AI agents to create personalized itineraries. The system combines LangGraph workflows, FastAPI backend, and a modern React frontend to deliver intelligent trip planning with human-in-the-loop decision making.
+Trip Planner is an agentic travel planning platform built around a LangGraph workflow extracted from [trip planner notebook](trip_planner.ipynb). The system coordinates multiple research agents (lodging, activities, food, transport, and advisory) to assemble a day-by-day itinerary, supports human-in-the-loop decisions, and exposes the workflow through a FastAPI service.
+
+# Workflow's diagram 
+
+![trip_planner_diagram](trip_planner_diagram.png)
+
 
 ## 🌟 Features
 
