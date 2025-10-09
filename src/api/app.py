@@ -186,10 +186,19 @@ async def resume_planning(payload: ResumeRequest) -> PlanningResponse:
     logger.debug("Payload research_plan: {plan}", plan=payload.research_plan)
 
     bundle = get_workflow_bundle()
+
+    thread_id = None
+    if payload.config:
+        thread_id = payload.config.get("configurable", {}).get("thread_id")
+
+    resume_context = payload.context
+    if resume_context is None and thread_id and hasattr(bundle, "get_thread_context"):
+        resume_context = bundle.get_thread_context(thread_id)
+
     try:
         logger.info("Starting resume_trip workflow")
         config, result = await bundle.resume_trip(
-            context=payload.context,
+            context=resume_context,
             config=payload.config,
             selections=payload.selections,
             research_plan=payload.research_plan,

@@ -70,11 +70,11 @@ This document outlines the feature slice design for the Trip Planner project, or
 - Geocoding services
 
 **Key Components**:
-- `src/services/amadeus.py` - Flight search integration
-- `src/services/trip_advisor.py` - TripAdvisor API integration
-- `src/services/geocoding.py` - Location services
-- `src/tools/internet_search.py` - Web search capabilities
-- `src/tools/reddit_search.py` - Reddit integration
+- `src/services/amadeus/` - Flight search integration
+- `src/services/trip_advisor/` - TripAdvisor API integration
+- `src/services/geocoding/geocoding.py` - Location services
+- `src/services/tavily_search/tools.py` - Web search capabilities
+- `src/services/reddit/tools.py` - Reddit integration
 
 **Dependencies**: None (external service integrations)
 

@@ -49,7 +49,7 @@ Follow this mapping between notebook sections and Python modules:
 - **RAG Pipeline**: `src/pipelines/rag.py` — Document processing and retrieval logic
 - **API Surface**: `src/api/app.py` — FastAPI endpoints and request/response handling
 - **Services**: `src/services/` — External API integrations (geocoding, TripAdvisor, Amadeus)
-- **Tools**: `src/tools/` — Search and research tool implementations
+- **Tools**: `src/services/` — Search and research tool implementations
 
 ### Testing Strategy
 Ensure comprehensive testing coverage:

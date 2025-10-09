@@ -464,67 +464,70 @@ class TestTripAdvisor:
 class TestTripAdvisorTools:
     """Test suite for TripAdvisor LangChain tools."""
 
-    def test_comprehensive_tool_with_dict_params(self):
+    @pytest.mark.asyncio
+    async def test_comprehensive_tool_with_dict_params(self):
         """Test comprehensive tool handles dictionary parameters correctly."""
         from src.services.trip_advisor import create_trip_advisor_tools
-        
+
         # Mock client - spec ensures it has the right interface
         mock_client = AsyncMock(spec=TripAdvisor)
         mock_client.comprehensive_search.return_value = []
-        
+
         tools = create_trip_advisor_tools(mock_client)
         comprehensive_tool = tools["comprehensive_search_tool"]
-        
+
         # Test with dictionary parameter (LangChain StructuredTool expects dict/object, not string)
-        result = comprehensive_tool.invoke({"searchQuery": "restaurants in Tokyo"})
-        
+        result = await comprehensive_tool.ainvoke({"searchQuery": "restaurants in Tokyo"})
+
         # Verify the result
         assert result == []
-        
+
         # Verify the client was called with proper parameters
-        mock_client.comprehensive_search.assert_called_once()
+        mock_client.comprehensive_search.assert_awaited_once()
         # Get the actual ComprehensiveLocationInput object that was passed
         call_args = mock_client.comprehensive_search.call_args
         input_obj = call_args[0][0] if call_args[0] else call_args[1].get('input')
         assert input_obj.searchQuery == "restaurants in Tokyo"
 
-    def test_comprehensive_tool_with_multiple_params(self):
+    @pytest.mark.asyncio
+    async def test_comprehensive_tool_with_multiple_params(self):
         """Test comprehensive tool handles multiple parameters correctly."""
         from src.services.trip_advisor import create_trip_advisor_tools
-        
+
         # Mock client
         mock_client = AsyncMock(spec=TripAdvisor)
         mock_client.comprehensive_search.return_value = []
-        
+
         tools = create_trip_advisor_tools(mock_client)
         comprehensive_tool = tools["comprehensive_search_tool"]
-        
+
         # Test with dictionary containing multiple parameters
         params_dict = {"searchQuery": "hotels in Paris", "limit_locations": 3}
-        
-        result = comprehensive_tool.invoke(params_dict)
-        
+
+        result = await comprehensive_tool.ainvoke(params_dict)
+
         # Verify the result
         assert result == []
-        
+
         # Verify the client was called with proper parameters
-        mock_client.comprehensive_search.assert_called_once()
+        mock_client.comprehensive_search.assert_awaited_once()
         call_args = mock_client.comprehensive_search.call_args
         input_obj = call_args[0][0] if call_args[0] else call_args[1].get('input')
         assert input_obj.searchQuery == "hotels in Paris"
         assert input_obj.limit_locations == 3
 
-    def test_comprehensive_tool_with_all_comprehensive_params(self):
+    @pytest.mark.asyncio
+    async def test_comprehensive_tool_with_all_comprehensive_params(self):
         """Test comprehensive tool with all ComprehensiveLocationInput parameters."""
         from src.services.trip_advisor import create_trip_advisor_tools
-        
+
         # Mock client
         mock_client = AsyncMock(spec=TripAdvisor)
         mock_client.comprehensive_search.return_value = []
-        
+
         tools = create_trip_advisor_tools(mock_client)
         comprehensive_tool = tools["comprehensive_search_tool"]
-        
+
         # Test with all possible parameters (without __arg1)
         all_params = {
             "searchQuery": "Cultural activities in Tokyo",
@@ -542,14 +545,14 @@ class TestTripAdvisorTools:
             "offset_photos": 0,
             "offset_reviews": 0
         }
-        
-        result = comprehensive_tool.invoke(all_params)
-        
+
+        result = await comprehensive_tool.ainvoke(all_params)
+
         # Verify the result
         assert result == []
-        
+
         # Verify the client was called with all parameters
-        mock_client.comprehensive_search.assert_called_once()
+        mock_client.comprehensive_search.assert_awaited_once()
         call_args = mock_client.comprehensive_search.call_args
         input_obj = call_args[0][0] if call_args[0] else call_args[1].get('input')
         assert input_obj.searchQuery == "Cultural activities in Tokyo"
