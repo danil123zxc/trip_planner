@@ -79,10 +79,12 @@ def create_internet_tool(settings: ApiSettings, pipeline: RetrievalPipeline) -> 
         _, reranked = await asyncio.gather(save_task, rerank_task)
         return reranked
         
-          
+    description = f"""
+    Search the internet for information
+    """
     return StructuredTool.from_function(
         coroutine=_arun,
         name="search_internet_tool",
-        description="Search trusted web sources for destination research.",  
+        description=description,
         args_schema=InternetSearchInput,
     )

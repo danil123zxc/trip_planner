@@ -265,6 +265,9 @@ def test_plan_start_can_return_completed_plan(client: TestClient, stub_bundle: S
 def test_plan_resume_returns_final_plan(client: TestClient, stub_bundle: StubBundle) -> None:
     context_payload = _make_context_payload()
     start_response = client.post("/plan/start", json={"context": context_payload})
+
+    assert start_response.status_code == 200
+    
     start_data = start_response.json()
     config = start_data["config"]
 

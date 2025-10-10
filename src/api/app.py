@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from typing import Dict
-from fastapi import FastAPI, HTTPException
+from typing import Dict, Annotated
+from fastapi import FastAPI, HTTPException, Form
 from src.api.schemas import PlanRequest, ResumeRequest, PlanningResponse
 import sentry_sdk
 import logging
@@ -107,15 +107,15 @@ async def start_planning(payload: PlanRequest) -> PlanningResponse:
     """
 
     logger.info("Starting new trip planning request")
-    logger.info(f"Destination: {payload.context.destination}, {payload.context.destination_country}")
-    logger.info(f"Budget: {payload.context.budget} {payload.context.currency}")
-    logger.info(f"Travel dates: {payload.context.date_from} to {payload.context.date_to}")
-    logger.info(f"Group size: {payload.context.adults_num} adults, {payload.context.children_num} children")
+    logger.info(f"Destination: {payload.destination}, {payload.destination_country}")
+    logger.info(f"Budget: {payload.budget} {payload.currency}")
+    logger.info(f"Travel dates: {payload.date_from} to {payload.date_to}")
+    logger.info(f"Group size: {payload.adults_num} adults, {payload.children_num} children")
     
     bundle = get_workflow_bundle()
     try:
         config, result = await bundle.plan_trip(
-            context=payload.context
+            context=payload
         )
         logger.info("Plan_trip workflow completed successfully")
         logger.debug(f"Result keys: {list(result.keys()) if result else 'None'}")
@@ -131,7 +131,7 @@ async def start_planning(payload: PlanRequest) -> PlanningResponse:
     
 
 @app.post("/plan/resume", response_model=PlanningResponse)
-async def resume_planning(payload: ResumeRequest) -> PlanningResponse:
+async def resume_planning(payload: PlanRequest) -> PlanningResponse:
     """Resume the trip planning workflow after user selections.
     
     This endpoint continues the planning workflow from where it was interrupted,

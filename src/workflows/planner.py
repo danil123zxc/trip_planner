@@ -191,7 +191,7 @@ def make_lodging_node(agent: AgentExecutor):
         IMPORTANT: When creating lodging candidates, use the 'location_id' from the API responses as the 'id' field. 
        
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
         default = LodgingAgentOutput(lodging=[])
         return _extract_agent_output(response, key="lodging", default=default)
 
@@ -217,7 +217,7 @@ def make_activities_node(agent: AgentExecutor):
         IMPORTANT: When creating activity candidates, use the 'location_id' from the API responses as the 'id' field. 
         
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
         default = ActivitiesAgentOutput(activities=[])
         return _extract_agent_output(response, key="activities", default=default)
 
@@ -243,7 +243,7 @@ def make_food_node(agent: AgentExecutor):
         IMPORTANT: When creating food candidates, use the 'location_id' from the API responses as the 'id' field. 
        
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
         default = FoodAgentOutput(food=[])
         return _extract_agent_output(response, key="food", default=default)
 
@@ -266,7 +266,7 @@ def make_intercity_transport_node(agent: AgentExecutor):
         Candidates research details: {candidates}
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
         default = IntercityTransportAgentOutput(transport=[])
         return _extract_agent_output(response, key="intercity_transport", default=default)
 
@@ -284,7 +284,7 @@ def make_recommendations_node(agent: AgentExecutor):
         [INPUT CONTEXT]
         {runtime.context}
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=prompt)]})
+        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
         default = RecommendationsOutput(
             safety_level="moderate", child_friendly_rating=3
         )

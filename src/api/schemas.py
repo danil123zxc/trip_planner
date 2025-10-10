@@ -4,11 +4,9 @@ from src.core.domain import Context
 from src.core.domain import CandidateLodging, CandidateIntercityTransport, CandidateActivity, CandidateFood
 from src.core.domain import RecommendationsOutput, ResearchPlan, BudgetEstimate, FinalPlan
 
-class PlanRequest(BaseModel):
+class PlanRequest(Context):
     """Request payload used to start a new planning run."""
-
-    context: Context = Field(..., description="Structured trip configuration containing destination, dates, and travellers")
-
+    pass
 
 class ResumeSelections(BaseModel):
     """Indices of options chosen during human-in-the-loop review."""
