@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 
 from langchain.agents import AgentExecutor
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.tools import Tool
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -28,7 +28,18 @@ from src.core.domain import (
     State,
 )
 from src.services.geocoding import get_coordinates_nominatim
+import logging
+import sentry_sdk
+import os
 
+logger = logging.getLogger(__name__)
+
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    enable_logs=True,
+    send_default_pii=True,
+    traces_sample_rate=1.0,
+)
 
 @dataclass(slots=True)
 class ResearchAgents:
@@ -110,7 +121,12 @@ def make_budget_estimate_node(llm: BaseChatModel):
             purpose=runtime.context.trip_purpose,
             notes=runtime.context.notes,
         )
-        budget = await structured_llm.ainvoke(prompt)
+        try:
+            budget = await structured_llm.ainvoke(prompt)
+        except Exception as e:
+            logger.error(f"Error invoking budget estimate node: {e}")
+            raise e
+        
         return {
             "messages": [
                 AIMessage(
@@ -141,7 +157,12 @@ def make_research_plan_node(llm: BaseChatModel):
             budget=state.estimated_budget,
             currency=runtime.context.currency,
         )
-        plan = await structured_llm.ainvoke(prompt)
+        try:
+            plan = await structured_llm.ainvoke(prompt)
+        except Exception as e:
+            logger.error(f"Error invoking research plan node: {e}")
+            raise e
+        
         coordinates = get_coordinates_nominatim(
             f"{runtime.context.destination}, {runtime.context.destination_country}"
         )
@@ -167,8 +188,17 @@ def _extract_agent_output(
 ) -> Dict[str, Any]:
     """Normalise agent responses into the shared node contract."""
 
+    logger.debug(f"Agent response: {response}")
+
     payload = response.get("structured_response", default)
-    messages = response.get("messages", [])
+    messages = response.get("messages", [SystemMessage(content="Empty response")])
+
+    logger.info(f"Agent output: {payload}")
+    logger.debug(f"Agent output type: {type(payload)}")
+    logger.debug(f"Agent output keys: {payload.keys()}")
+    logger.debug(f"Agent output values: {payload.values()}")
+    logger.debug(f"Agent output items: {payload.items()}")
+
     return {"messages": messages, key: payload}
 
 
@@ -187,11 +217,17 @@ def make_lodging_node(agent: AgentExecutor):
 
         Candidates research details: {candidates}
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
+        If {state.lodging} is not empty, return those options + the requested number of options(they have to be unique).
 
         IMPORTANT: When creating lodging candidates, use the 'location_id' from the API responses as the 'id' field. 
        
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
+        try:
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+        except Exception as e:
+            logger.error(f"Error invoking agent: {e}")
+            raise e
+
         default = LodgingAgentOutput(lodging=[])
         return _extract_agent_output(response, key="lodging", default=default)
 
@@ -212,12 +248,18 @@ def make_activities_node(agent: AgentExecutor):
         Budget (activities total): {state.estimated_budget.activities if state.estimated_budget else 'unknown'} {runtime.context.currency}
 
         Candidates research details: {candidates}
+        If {state.activities} is not empty, return those options + the requested number of options(they have to be unique).
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
 
         IMPORTANT: When creating activity candidates, use the 'location_id' from the API responses as the 'id' field. 
         
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
+        try:
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+        except Exception as e:
+            logger.error(f"Error invoking agent: {e}")
+            raise e
+        
         default = ActivitiesAgentOutput(activities=[])
         return _extract_agent_output(response, key="activities", default=default)
 
@@ -238,12 +280,18 @@ def make_food_node(agent: AgentExecutor):
         Budget (food total): {state.estimated_budget.food if state.estimated_budget else 'unknown'} {runtime.context.currency}
 
         Candidates research details: {candidates}
+        If {state.food} is not empty, return those options + the requested number of options(they have to be unique).
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
 
         IMPORTANT: When creating food candidates, use the 'location_id' from the API responses as the 'id' field. 
        
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
+        try:
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+        except Exception as e:
+            logger.error(f"Error invoking agent: {e}")
+            raise e
+        
         default = FoodAgentOutput(food=[])
         return _extract_agent_output(response, key="food", default=default)
 
@@ -264,9 +312,15 @@ def make_intercity_transport_node(agent: AgentExecutor):
         Budget (intercity transport total): {state.estimated_budget.intercity_transport if state.estimated_budget else 'unknown'} {runtime.context.currency}
 
         Candidates research details: {candidates}
+        If {state.intercity_transport} is not empty, return those options + the requested number of options(they have to be unique).
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
+        try:
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+        except Exception as e:
+            logger.error(f"Error invoking agent: {e}")
+            raise e
+        
         default = IntercityTransportAgentOutput(transport=[])
         return _extract_agent_output(response, key="intercity_transport", default=default)
 
@@ -284,7 +338,13 @@ def make_recommendations_node(agent: AgentExecutor):
         [INPUT CONTEXT]
         {runtime.context}
         """
-        response = await agent.ainvoke({"messages": [HumanMessage(content=[{"type": "text", "text": prompt.strip() or "Fallback text"}])]})
+        try:
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+        except Exception as e:
+            logger.error(f"Error invoking agent: {e}")
+            raise e
+        
+        
         default = RecommendationsOutput(
             safety_level="moderate", child_friendly_rating=3
         )
@@ -311,7 +371,12 @@ def make_planner_node(llm: BaseChatModel):
         {state}
         {runtime.context}
         """
-        planner = await structured_llm.ainvoke(prompt)
+        try:
+            planner = await structured_llm.ainvoke(prompt)
+        except Exception as e:
+            logger.error(f"Error invoking planner: {e}")
+            raise e
+        
 
         return {
             "messages": [

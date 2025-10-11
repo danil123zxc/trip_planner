@@ -9,11 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from typing import Dict, Annotated
-from fastapi import FastAPI, HTTPException, Form
+from typing import Dict, Annotated, Any
+from fastapi import FastAPI, HTTPException, Form, Depends
 from src.api.schemas import PlanRequest, ResumeRequest, PlanningResponse
 import sentry_sdk
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.dependencies import lifespan, get_workflow_bundle
 from src.api.response_builder import _result_to_response
@@ -29,9 +30,16 @@ sentry_sdk.init(
 
 app = FastAPI(title="Trip Planner API", version="0.1.0", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/plan/start", response_model=PlanningResponse)
-async def start_planning(payload: PlanRequest) -> PlanningResponse:
+async def start_planning(payload: Annotated[PlanRequest, Depends()]) -> PlanningResponse:
     """Start the AI-powered trip planning workflow.
     
     This endpoint initiates the LangGraph-based trip planning process that coordinates
@@ -120,10 +128,14 @@ async def start_planning(payload: PlanRequest) -> PlanningResponse:
         logger.info("Plan_trip workflow completed successfully")
         logger.debug(f"Result keys: {list(result.keys()) if result else 'None'}")
         logger.info("Converting result to response")
+
     except RuntimeError as exc:
         logger.error(f"Runtime error during plan: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    except Exception as exc:  # pragma: no cover - safeguards unexpected graph failures
+    except ValueError as exc:
+        logger.error(f"Value error during plan: {str(exc)}")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc: 
         logger.error(f"Unexpected error during plan: {str(exc)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -131,7 +143,7 @@ async def start_planning(payload: PlanRequest) -> PlanningResponse:
     
 
 @app.post("/plan/resume", response_model=PlanningResponse)
-async def resume_planning(payload: PlanRequest) -> PlanningResponse:
+async def resume_planning(payload: ResumeRequest) -> PlanningResponse:
     """Resume the trip planning workflow after user selections.
     
     This endpoint continues the planning workflow from where it was interrupted,
@@ -209,7 +221,10 @@ async def resume_planning(payload: PlanRequest) -> PlanningResponse:
     except RuntimeError as exc:
         logger.error(f"Runtime error during resume: {str(exc)}")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:  # pragma: no cover - safeguards unexpected graph failures
+    except ValueError as exc:
+        logger.error(f"Value error during resume: {str(exc)}")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
         logger.error(f"Unexpected error during resume: {str(exc)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -228,3 +243,17 @@ async def health_check() -> Dict[str, str]:
 
     return {"status": "healthy", "service": "trip-planner-api"}
 
+
+@app.get("/workflow/info")
+async def get_workflow_info() -> Dict[str, Any]:
+    """Get detailed information about the workflow configuration."""
+    bundle = get_workflow_bundle()
+    
+    return {
+        'workflow_info': {
+            'llm_model': getattr(bundle.llm, 'model_name', type(bundle.llm).__name__),
+            'recursion_limit': bundle.recursion_limit,
+            'active_threads': len(bundle._contexts),
+            'pending_interrupts': len(bundle._pending_interrupts)
+        }
+    }

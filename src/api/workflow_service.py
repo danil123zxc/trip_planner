@@ -23,6 +23,7 @@ from src.core.domain import (
 )
 from langchain_xai import ChatXAI
 
+
 REQUIRED_SETTINGS = [
     "openai_api_key",
     "tavily_api_key",
@@ -121,6 +122,32 @@ class WorkflowBundle:
         self._pending_states: Dict[str, Mapping[str, Any]] = {}
         self._pending_interrupts: Dict[str, Dict[str, Any]] = {}
 
+    def __repr__(self) -> str:
+    
+        llm_name = getattr(self.llm, 'model_name', None) or getattr(self.llm, 'model', None) or type(self.llm).__name__
+        
+        return (
+            f"WorkflowBundle(\n"
+            f"  llm='{llm_name}',\n"
+            f"  recursion_limit={self.recursion_limit},\n"
+            f"  agents={{\n"
+            f"    lodging={type(self.agents.lodging).__name__},\n"
+            f"    activities={type(self.agents.activities).__name__},\n"
+            f"    food={type(self.agents.food).__name__},\n"
+            f"    intercity_transport={type(self.agents.intercity_transport).__name__},\n"
+            f"    recommendations={type(self.agents.recommendations).__name__}\n"
+            f"  }},\n"
+            f"  services={{\n"
+            f"    trip_advisor={type(self.trip_client).__name__},\n"
+            f"    flight_search={type(self.flight_client).__name__},\n"
+            f"    retrieval_pipeline={type(self.retrieval_pipeline).__name__}\n"
+            f"  }},\n"
+            f"  graph_compiled={self.graph is not None},\n"
+            f"  active_threads={len(self._contexts)},\n"
+            f"  pending_interrupts={len(self._pending_interrupts)}\n"
+            f")"
+        )
+
     def _build_retrieval_pipeline(self) -> RetrievalPipeline:
         """Build the RAG pipeline for document retrieval and reranking.
         
@@ -184,20 +211,17 @@ class WorkflowBundle:
             payload["research_plan"] = research_plan.model_dump(exclude_none=True)
 
         def resolve_options(key: str) -> List[Any]: 
-            """Extract candidate options from stored agent output.
-            
-            Args:
-                key: State key (e.g., 'lodging', 'activities')
-                attr: Attribute name on the agent output (e.g., 'lodging', 'activities')
-                
-            Returns:
-                List of candidate objects from the agent output
-            """
+            """Extract candidate options from stored agent output."""
             output = state.get(key)
             if output is None:
                 return []
-     
-            return list(output)
+            
+            # Extract the list field from the agent output
+            # e.g., LodgingAgentOutput has a .lodging field
+            if hasattr(output, key):
+                return getattr(output, key) or []
+            
+            return []
 
 
         single_map = {
