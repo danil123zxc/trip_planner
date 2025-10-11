@@ -195,9 +195,6 @@ def _extract_agent_output(
 
     logger.info(f"Agent output: {payload}")
     logger.debug(f"Agent output type: {type(payload)}")
-    logger.debug(f"Agent output keys: {payload.keys()}")
-    logger.debug(f"Agent output values: {payload.values()}")
-    logger.debug(f"Agent output items: {payload.items()}")
 
     return {"messages": messages, key: payload}
 
@@ -223,7 +220,7 @@ def make_lodging_node(agent: AgentExecutor):
        
         """
         try:
-            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip(), name="lodging_prompt")]})
         except Exception as e:
             logger.error(f"Error invoking agent: {e}")
             raise e
@@ -255,7 +252,7 @@ def make_activities_node(agent: AgentExecutor):
         
         """
         try:
-            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip(), name="activities_prompt")]})
         except Exception as e:
             logger.error(f"Error invoking agent: {e}")
             raise e
@@ -287,7 +284,7 @@ def make_food_node(agent: AgentExecutor):
        
         """
         try:
-            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip(), name="food_prompt")]})
         except Exception as e:
             logger.error(f"Error invoking agent: {e}")
             raise e
@@ -316,7 +313,7 @@ def make_intercity_transport_node(agent: AgentExecutor):
         Return only {candidates.candidates_number if candidates and candidates.candidates_number else 'the requested number of'} options.
         """
         try:
-            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip(), name="intercity_transport_prompt")]})
         except Exception as e:
             logger.error(f"Error invoking agent: {e}")
             raise e
@@ -339,7 +336,7 @@ def make_recommendations_node(agent: AgentExecutor):
         {runtime.context}
         """
         try:
-            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip())]})
+            response = await agent.ainvoke({'messages': [HumanMessage(content=prompt.strip(), name="recommendations_prompt")]})
         except Exception as e:
             logger.error(f"Error invoking agent: {e}")
             raise e

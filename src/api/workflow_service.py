@@ -8,8 +8,9 @@ from src.services import (
     create_reddit_tool,
 )
 from src.workflows.planner import build_research_agents, build_research_graph
+from src.core.domain import ResearchPlan
 from src.api.schemas import ResumeSelections
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.types import Command
 from langgraph.checkpoint.memory import InMemorySaver
 from typing import Dict, Any, List, Optional, Tuple, Mapping
@@ -20,6 +21,7 @@ from src.core.domain import (
     CandidateResearch,
     Context,
     State,
+    
 )
 from langchain_xai import ChatXAI
 
@@ -286,7 +288,6 @@ class WorkflowBundle:
                     
         Returns:
             Tuple containing:
-            - thread_id: Unique identifier for this planning session
             - config: LangGraph configuration for resuming if interrupted
             - result: Workflow execution results including agent outputs and state
             
@@ -294,14 +295,14 @@ class WorkflowBundle:
             RuntimeError: If workflow execution fails or encounters errors
         """
         active_thread = f"trip_{uuid4()}"
-        config = self._configs.get(active_thread) or self._make_config(active_thread)
+        config = self._make_config(active_thread)
 
         self._contexts[active_thread] = context
         self._configs[active_thread] = config
         self._pending_states.pop(active_thread, None)
         self._pending_interrupts.pop(active_thread, None)
 
-        messages: List[BaseMessage] = []
+        messages: List[BaseMessage] = [HumanMessage(content="Start the trip planning workflow.")]
       
         initial_state = State(messages=messages)
 
@@ -384,3 +385,52 @@ class WorkflowBundle:
 
         return active_config, result
 
+    async def final_plan(
+        self,
+        *,
+        config: Dict[str, Any],
+        selections: ResumeSelections,
+    ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
+        """Generate the final plan for the trip planning workflow."""
+        
+        active_thread = config.get("configurable", {}).get("thread_id")
+        if not active_thread:
+            raise RuntimeError("Resume config must include configurable.thread_id.")
+            
+        if active_thread not in self._contexts:
+            raise RuntimeError(f"Unknown planning thread '{active_thread}'.")
+            
+        stored_context = self._contexts[active_thread]
+        
+        result = await self.graph.ainvoke(
+            Command(resume={"selections": selections.model_dump(exclude_none=True)}),
+            context=stored_context,
+            config=config,
+        )
+        self._store_result(active_thread, result)
+        return config, result
+
+    async def extra_research(
+        self,
+        *,
+        config: Dict[str, Any],
+        research_plan: ResearchPlan,
+    ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
+        """Perform extra research for the trip planning workflow."""
+        
+        active_thread = config.get("configurable", {}).get("thread_id")
+        if not active_thread:
+            raise RuntimeError("Resume config must include configurable.thread_id.")
+
+        if active_thread not in self._contexts:
+            raise RuntimeError(f"Unknown planning thread '{active_thread}'.")
+
+        stored_context = self._contexts[active_thread]
+        
+        result = await self.graph.ainvoke(
+            Command(resume={"research_plan": research_plan.model_dump(exclude_none=True)}),
+            context=stored_context,
+            config=config,
+        )   
+        self._store_result(active_thread, result)
+        return config, result
