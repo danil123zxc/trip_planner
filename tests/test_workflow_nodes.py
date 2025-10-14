@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Tuple, Type
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.graph import CompiledStateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 from langgraph.types import Command
 

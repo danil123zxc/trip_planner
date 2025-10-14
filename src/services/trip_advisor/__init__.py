@@ -14,6 +14,7 @@ from src.services.trip_advisor.client import TripAdvisor, create_trip_advisor_cl
 from src.services.trip_advisor.tools import create_trip_advisor_tools
 from src.services.trip_advisor.schemas import (
     ComprehensiveLocationInput,
+    ComprehensiveLocationResult,
     SearchLocation,
     LocationDetails,
     LocationPhotos,
@@ -26,6 +27,7 @@ __all__ = [
     "create_trip_advisor_client",
     "create_trip_advisor_tools",
     "ComprehensiveLocationInput",
+    "ComprehensiveLocationResult",
     "SearchLocation",
     "LocationDetails",
     "LocationPhotos",
