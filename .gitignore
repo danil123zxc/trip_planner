@@ -229,3 +229,4 @@ node_modules/
 .dynamodb/
 
 AGENTS.md
+create_readme_prompt.md

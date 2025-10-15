@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api import app as api_app
-from src.core.domain import (
+from src.core.schemas import (
     ActivitiesAgentOutput,
     BudgetEstimate,
     CandidateActivity,
