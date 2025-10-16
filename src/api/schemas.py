@@ -4,36 +4,53 @@ from src.core.domain import Context
 from src.core.domain import CandidateLodging, CandidateIntercityTransport, CandidateActivity, CandidateFood
 from src.core.domain import RecommendationsOutput, ResearchPlan, BudgetEstimate, FinalPlan
 
-class PlanRequest(BaseModel):
+class PlanRequest(Context):
     """Request payload used to start a new planning run."""
-
-    context: Context = Field(..., description="Structured trip configuration containing destination, dates, and travellers")
-
+    pass
 
 class ResumeSelections(BaseModel):
     """Indices of options chosen during human-in-the-loop review."""
 
-    lodging: Optional[int] = Field(
-        default=None,
-        description="Index of the selected lodging option (0-based).",
+    lodging: CandidateLodging = Field(
+        default_factory=CandidateLodging,
+        description="Selected lodging option.",
     )
-    intercity_transport: Optional[int] = Field(
-        default=None,
-        description="Index of the selected intercity transport option (0-based).",
+    intercity_transport: CandidateIntercityTransport = Field(
+        default_factory=CandidateIntercityTransport,
+        description="Selected intercity transport option.",
     )
-    activities: Optional[List[int]] = Field(
-        default=None,
-        description="Indices of activity options to keep. Empty list means keep all.",
+    activities: List[CandidateActivity] = Field(
+        default_factory=list,
+        description="Selected activity options.",
     )
-    food: Optional[List[int]] = Field(
-        default=None,
-        description="Indices of food options to keep. Empty list means keep all.",
+    food: List[CandidateFood] = Field(
+        default_factory=list,
+        description="Selected food options.",
     )
 
 
-class ResumeRequest(BaseModel):
-    """Request payload used to resume the graph after an interrupt."""
+# class ResumeRequest(BaseModel):
+#     """Request payload used to resume the graph after an interrupt."""
 
+#     config: Optional[Dict[str, Any]] = Field(
+#         default=None,
+#         description="LangGraph configuration object returned by the interrupt response.",
+#     )
+#     selections: ResumeSelections = Field(
+#         default_factory=ResumeSelections,
+#         description="Indices indicating which options the user selected.",
+#     )
+#     research_plan: Optional[ResearchPlan] = Field(
+#         default=None,
+#         description="Optional overrides for the next research plan. Keys align with CandidateResearch fields.",
+#     )
+#     context: Optional[Context] = Field(
+#         default=None,
+#         description="Context of the trip being planned.(Specify only if you didn't plan the trip before)"
+#     )
+
+class FinalPlanRequest(BaseModel):
+    """Request payload used to return the final plan for the trip planning workflow."""
     config: Optional[Dict[str, Any]] = Field(
         default=None,
         description="LangGraph configuration object returned by the interrupt response.",
@@ -42,13 +59,18 @@ class ResumeRequest(BaseModel):
         default_factory=ResumeSelections,
         description="Indices indicating which options the user selected.",
     )
-    research_plan: Optional[ResearchPlan] = Field(
+
+
+class ExtraResearchRequest(BaseModel):
+    """Request payload used to perform extra research for the trip planning workflow."""
+
+    config: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Optional overrides for the next research plan. Keys align with CandidateResearch fields.",
+        description="LangGraph configuration object returned by the interrupt response.",
     )
-    context: Optional[Context] = Field(
-        default=None,
-        description="Context of the trip being planned.(Specify only if you didn't plan the trip before)"
+    research_plan: ResearchPlan = Field(    
+        default_factory=ResearchPlan,
+        description="Overrides for the next research plan. Keys align with CandidateResearch fields.",
     )
 
 
@@ -67,7 +89,7 @@ class PlanningResponse(BaseModel):
     research_plan: Optional[ResearchPlan] = Field(
         default=None, description="Latest research plan produced by the workflow"
     )
-    lodging: Optional[List[CandidateLodging]] = Field(
+    lodging: Optional[List[CandidateLodging] | CandidateLodging] = Field(
         default=None, description="Candidate lodging options surfaced by the agent"
     )
     activities: Optional[List[CandidateActivity]] = Field(
@@ -76,7 +98,7 @@ class PlanningResponse(BaseModel):
     food: Optional[List[CandidateFood]] = Field(
         default=None, description="Candidate food options surfaced by the agent"
     )
-    intercity_transport: Optional[List[CandidateIntercityTransport]] = Field(
+    intercity_transport: Optional[List[CandidateIntercityTransport] | CandidateIntercityTransport] = Field(
         default=None, description="Candidate intercity transport options surfaced by the agent"
     )
     recommendations: Optional[RecommendationsOutput] = Field(
@@ -88,6 +110,7 @@ class PlanningResponse(BaseModel):
     interrupt: Optional[Dict[str, Any]] = Field(
         default=None, description="Raw interrupt payload containing pending human tasks"
     )
-    messages: List[str] = Field(
-        default_factory=list, description="Workflow execution log rendered as plain strings"
+    messages: Optional[List[str]] = Field(
+        default=None,
+        description="Workflow execution log rendered as plain strings"
     )

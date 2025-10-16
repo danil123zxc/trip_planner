@@ -14,6 +14,7 @@ from src.services.trip_advisor import (
     LocationReviews,
     NearbySearch,
     ComprehensiveLocationInput,
+    ComprehensiveLocationResult,
 )
 
 
@@ -525,9 +526,7 @@ class TestTripAdvisorTools:
         mock_client = AsyncMock(spec=TripAdvisor)
         mock_client.comprehensive_search.return_value = []
 
-        tools = create_trip_advisor_tools(mock_client)
-        comprehensive_tool = tools["comprehensive_search_tool"]
-
+        comprehensive_tool = create_trip_advisor_tools(mock_client)
         # Test with all possible parameters (without __arg1)
         all_params = {
             "searchQuery": "Cultural activities in Tokyo",
@@ -549,8 +548,9 @@ class TestTripAdvisorTools:
         result = await comprehensive_tool.ainvoke(all_params)
 
         # Verify the result
-        assert result == []
-
+        assert isinstance(result, list)
+        assert isinstance(result[0], ComprehensiveLocationResult)
+        
         # Verify the client was called with all parameters
         mock_client.comprehensive_search.assert_awaited_once()
         call_args = mock_client.comprehensive_search.call_args

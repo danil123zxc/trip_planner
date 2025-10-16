@@ -9,11 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from typing import Dict
-from fastapi import FastAPI, HTTPException
-from src.api.schemas import PlanRequest, ResumeRequest, PlanningResponse
+from typing import Dict, Annotated, Any
+from fastapi import FastAPI, HTTPException, Form, Depends
+from src.api.schemas import PlanRequest, PlanningResponse, ExtraResearchRequest, FinalPlanRequest
 import sentry_sdk
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.dependencies import lifespan, get_workflow_bundle
 from src.api.response_builder import _result_to_response
@@ -29,9 +30,16 @@ sentry_sdk.init(
 
 app = FastAPI(title="Trip Planner API", version="0.1.0", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/plan/start", response_model=PlanningResponse)
-async def start_planning(payload: PlanRequest) -> PlanningResponse:
+async def start_planning(payload: Annotated[PlanRequest, Depends()]) -> PlanningResponse:
     """Start the AI-powered trip planning workflow.
     
     This endpoint initiates the LangGraph-based trip planning process that coordinates
@@ -107,116 +115,168 @@ async def start_planning(payload: PlanRequest) -> PlanningResponse:
     """
 
     logger.info("Starting new trip planning request")
-    logger.info(f"Destination: {payload.context.destination}, {payload.context.destination_country}")
-    logger.info(f"Budget: {payload.context.budget} {payload.context.currency}")
-    logger.info(f"Travel dates: {payload.context.date_from} to {payload.context.date_to}")
-    logger.info(f"Group size: {payload.context.adults_num} adults, {payload.context.children_num} children")
+    logger.info(f"Destination: {payload.destination}, {payload.destination_country}")
+    logger.info(f"Budget: {payload.budget} {payload.currency}")
+    logger.info(f"Travel dates: {payload.date_from} to {payload.date_to}")
+    logger.info(f"Group size: {payload.adults_num} adults, {payload.children_num} children")
     
     bundle = get_workflow_bundle()
     try:
         config, result = await bundle.plan_trip(
-            context=payload.context
+            context=payload
         )
         logger.info("Plan_trip workflow completed successfully")
         logger.debug(f"Result keys: {list(result.keys()) if result else 'None'}")
         logger.info("Converting result to response")
+
     except RuntimeError as exc:
         logger.error(f"Runtime error during plan: {str(exc)}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    except Exception as exc:  # pragma: no cover - safeguards unexpected graph failures
+    except ValueError as exc:
+        logger.error(f"Value error during plan: {str(exc)}")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc: 
         logger.error(f"Unexpected error during plan: {str(exc)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return _result_to_response(config, result)
     
-
-@app.post("/plan/resume", response_model=PlanningResponse)
-async def resume_planning(payload: ResumeRequest) -> PlanningResponse:
-    """Resume the trip planning workflow after user selections.
-    
-    This endpoint continues the planning workflow from where it was interrupted,
-    incorporating user selections for lodging, activities, food, and transport options.
-    The workflow will proceed to generate the final itinerary or request additional
-    selections if needed.
-    
-    The resume process:
-    - Uses the provided config to restore the workflow state
-    - Applies user selections to filter down to chosen options
-    - Continues with final planning and itinerary generation
-    - Can handle research plan overrides for additional research
-    
-    Args:
-        payload: Contains:
-            - config: LangGraph configuration with thread_id from previous response
-            - selections: User choices for each category (indices or objects)
-            - research_plan: Optional overrides for additional research
-            
-    Returns:
-        PlanningResponse with updated workflow state:
-        - status: "interrupt" for more selections needed, "complete" for final plan
-        - final_plan: Complete day-by-day itinerary when status is "complete"
-        - Additional agent outputs and selections as needed
-        
-    Raises:
-        HTTPException: 400 for invalid thread_id or selections, 500 for workflow errors
-        
-    Note:
-        - If config is None, creates a new planning session with provided selections
-        - Selections can be indices (integers) or full candidate objects
-        - Research plan overrides allow requesting additional candidates
-        
-    Example:
-        POST /plan/resume with:
-        ```json
-        {
-            "config": {"configurable": {"thread_id": "trip_123"}},
-            "selections": {
-                "lodging": 0,
-                "activities": [0, 1, 2],
-                "food": [0, 1],
-                "intercity_transport": 0
-            }
-        }
-        ```
-    """
-
-    logger.info("Resume planning request received")
-    logger.debug("Payload config: {config}", config=payload.config)
-    logger.debug("Payload selections: {selections}", selections=payload.selections)
-    logger.debug("Payload research_plan: {plan}", plan=payload.research_plan)
+@app.post("/plan/extra_research", response_model=PlanningResponse)
+async def extra_research(payload: ExtraResearchRequest) -> PlanningResponse:
+    """Perform extra research for the trip planning workflow."""
+    logger.info("Extra research request received")
+    logger.debug("Payload: {payload}", payload=payload)
 
     bundle = get_workflow_bundle()
-
-    thread_id = None
-    if payload.config:
-        thread_id = payload.config.get("configurable", {}).get("thread_id")
-
-    resume_context = payload.context
-    if resume_context is None and thread_id and hasattr(bundle, "get_thread_context"):
-        resume_context = bundle.get_thread_context(thread_id)
-
     try:
-        logger.info("Starting resume_trip workflow")
-        config, result = await bundle.resume_trip(
-            context=resume_context,
+        config, result = await bundle.extra_research(
             config=payload.config,
-            selections=payload.selections,
             research_plan=payload.research_plan,
         )
-        logger.info("Resume_trip workflow completed successfully")
+        logger.info("Extra research workflow completed successfully")
         logger.debug("Result: {result}", result=result)
-
-    except RuntimeError as exc:
-        logger.error(f"Runtime error during resume: {str(exc)}")
+    except ValueError as exc:
+        logger.error(f"Value error during extra research: {str(exc)}")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:  # pragma: no cover - safeguards unexpected graph failures
-        logger.error(f"Unexpected error during resume: {str(exc)}", exc_info=True)
+    except Exception as exc:
+        logger.error(f"Unexpected error during extra research: {str(exc)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
+    
     logger.info("Converting result to response")
-    response = _result_to_response(config, result)
-    logger.info("Resume planning completed successfully")
-    return response  
+    return _result_to_response(config, result)
+
+@app.post("/plan/final_plan", response_model=PlanningResponse)
+async def final_plan(payload: FinalPlanRequest) -> PlanningResponse:
+    """Generate the final plan for the trip planning workflow."""
+    logger.info("Final plan request received")
+    logger.debug("Payload: {payload}", payload=payload)
+    
+    bundle = get_workflow_bundle()
+    try:
+        config, result = await bundle.final_plan(
+            config=payload.config,
+            selections=payload.selections,
+        )
+        logger.info("Final plan workflow completed successfully")
+        logger.debug("Result: {result}", result=result)
+    except Exception as exc:
+        logger.error(f"Unexpected error during final plan: {str(exc)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    
+    logger.info("Converting result to response")
+    return _result_to_response(config, result)
+
+
+# @app.post("/plan/resume", response_model=PlanningResponse)
+# async def resume_planning(payload: ResumeRequest) -> PlanningResponse:
+#     """Resume the trip planning workflow after user selections.
+    
+#     This endpoint continues the planning workflow from where it was interrupted,
+#     incorporating user selections for lodging, activities, food, and transport options.
+#     The workflow will proceed to generate the final itinerary or request additional
+#     selections if needed.
+    
+#     The resume process:
+#     - Uses the provided config to restore the workflow state
+#     - Applies user selections to filter down to chosen options
+#     - Continues with final planning and itinerary generation
+#     - Can handle research plan overrides for additional research
+    
+#     Args:
+#         payload: Contains:
+#             - config: LangGraph configuration with thread_id from previous response
+#             - selections: User choices for each category (indices or objects)
+#             - research_plan: Optional overrides for additional research
+            
+#     Returns:
+#         PlanningResponse with updated workflow state:
+#         - status: "interrupt" for more selections needed, "complete" for final plan
+#         - final_plan: Complete day-by-day itinerary when status is "complete"
+#         - Additional agent outputs and selections as needed
+        
+#     Raises:
+#         HTTPException: 400 for invalid thread_id or selections, 500 for workflow errors
+        
+#     Note:
+#         - If config is None, creates a new planning session with provided selections
+#         - Selections can be indices (integers) or full candidate objects
+#         - Research plan overrides allow requesting additional candidates
+        
+#     Example:
+#         POST /plan/resume with:
+#         ```json
+#         {
+#             "config": {"configurable": {"thread_id": "trip_123"}},
+#             "selections": {
+#                 "lodging": 0,
+#                 "activities": [0, 1, 2],
+#                 "food": [0, 1],
+#                 "intercity_transport": 0
+#             }
+#         }
+#         ```
+#     """
+
+#     logger.info("Resume planning request received")
+#     logger.debug("Payload config: {config}", config=payload.config)
+#     logger.debug("Payload selections: {selections}", selections=payload.selections)
+#     logger.debug("Payload research_plan: {plan}", plan=payload.research_plan)
+
+#     bundle = get_workflow_bundle()
+
+#     thread_id = None
+#     if payload.config:
+#         thread_id = payload.config.get("configurable", {}).get("thread_id")
+
+#     resume_context = payload.context
+#     if resume_context is None and thread_id and hasattr(bundle, "get_thread_context"):
+#         resume_context = bundle.get_thread_context(thread_id)
+
+#     try:
+#         logger.info("Starting resume_trip workflow")
+#         config, result = await bundle.resume_trip(
+#             context=resume_context,
+#             config=payload.config,
+#             selections=payload.selections,
+#             research_plan=payload.research_plan,
+#         )
+#         logger.info("Resume_trip workflow completed successfully")
+#         logger.debug("Result: {result}", result=result)
+
+#     except RuntimeError as exc:
+#         logger.error(f"Runtime error during resume: {str(exc)}")
+#         raise HTTPException(status_code=400, detail=str(exc)) from exc
+#     except ValueError as exc:
+#         logger.error(f"Value error during resume: {str(exc)}")
+#         raise HTTPException(status_code=400, detail=str(exc)) from exc
+#     except Exception as exc:
+#         logger.error(f"Unexpected error during resume: {str(exc)}", exc_info=True)
+#         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+#     logger.info("Converting result to response")
+#     response = _result_to_response(config, result)
+#     logger.info("Resume planning completed successfully")
+#     return response  
 
 @app.get("/sentry-debug")
 async def trigger_error():
@@ -228,3 +288,17 @@ async def health_check() -> Dict[str, str]:
 
     return {"status": "healthy", "service": "trip-planner-api"}
 
+
+@app.get("/workflow/info")
+async def get_workflow_info() -> Dict[str, Any]:
+    """Get detailed information about the workflow configuration."""
+    bundle = get_workflow_bundle()
+    
+    return {
+        'workflow_info': {
+            'llm_model': getattr(bundle.llm, 'model_name', type(bundle.llm).__name__),
+            'recursion_limit': bundle.recursion_limit,
+            'active_threads': len(bundle._contexts),
+            'pending_interrupts': len(bundle._pending_interrupts)
+        }
+    }

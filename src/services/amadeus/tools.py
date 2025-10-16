@@ -20,7 +20,7 @@ def create_flight_search_tool(client: Client) -> Tool:
 
     return StructuredTool.from_function(
         name="search_flights_tool",
-        description="Search for flights using the Amadeus flight offers endpoint.",
+        description="Search for flights using the Amadeus flight offers endpoint. Use FlightSearchInput as input schema.",
         func=_run,
         args_schema=FlightSearchInput,
     )

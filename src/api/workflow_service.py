@@ -8,8 +8,9 @@ from src.services import (
     create_reddit_tool,
 )
 from src.workflows.planner import build_research_agents, build_research_graph
+from src.core.domain import ResearchPlan
 from src.api.schemas import ResumeSelections
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.types import Command
 from langgraph.checkpoint.memory import InMemorySaver
 from typing import Dict, Any, List, Optional, Tuple, Mapping
@@ -20,8 +21,10 @@ from src.core.domain import (
     CandidateResearch,
     Context,
     State,
+    
 )
 from langchain_xai import ChatXAI
+
 
 REQUIRED_SETTINGS = [
     "openai_api_key",
@@ -121,6 +124,32 @@ class WorkflowBundle:
         self._pending_states: Dict[str, Mapping[str, Any]] = {}
         self._pending_interrupts: Dict[str, Dict[str, Any]] = {}
 
+    def __repr__(self) -> str:
+    
+        llm_name = getattr(self.llm, 'model_name', None) or getattr(self.llm, 'model', None) or type(self.llm).__name__
+        
+        return (
+            f"WorkflowBundle(\n"
+            f"  llm='{llm_name}',\n"
+            f"  recursion_limit={self.recursion_limit},\n"
+            f"  agents={{\n"
+            f"    lodging={type(self.agents.lodging).__name__},\n"
+            f"    activities={type(self.agents.activities).__name__},\n"
+            f"    food={type(self.agents.food).__name__},\n"
+            f"    intercity_transport={type(self.agents.intercity_transport).__name__},\n"
+            f"    recommendations={type(self.agents.recommendations).__name__}\n"
+            f"  }},\n"
+            f"  services={{\n"
+            f"    trip_advisor={type(self.trip_client).__name__},\n"
+            f"    flight_search={type(self.flight_client).__name__},\n"
+            f"    retrieval_pipeline={type(self.retrieval_pipeline).__name__}\n"
+            f"  }},\n"
+            f"  graph_compiled={self.graph is not None},\n"
+            f"  active_threads={len(self._contexts)},\n"
+            f"  pending_interrupts={len(self._pending_interrupts)}\n"
+            f")"
+        )
+
     def _build_retrieval_pipeline(self) -> RetrievalPipeline:
         """Build the RAG pipeline for document retrieval and reranking.
         
@@ -184,20 +213,17 @@ class WorkflowBundle:
             payload["research_plan"] = research_plan.model_dump(exclude_none=True)
 
         def resolve_options(key: str) -> List[Any]: 
-            """Extract candidate options from stored agent output.
-            
-            Args:
-                key: State key (e.g., 'lodging', 'activities')
-                attr: Attribute name on the agent output (e.g., 'lodging', 'activities')
-                
-            Returns:
-                List of candidate objects from the agent output
-            """
+            """Extract candidate options from stored agent output."""
             output = state.get(key)
             if output is None:
                 return []
-     
-            return list(output)
+            
+            # Extract the list field from the agent output
+            # e.g., LodgingAgentOutput has a .lodging field
+            if hasattr(output, key):
+                return getattr(output, key) or []
+            
+            return []
 
 
         single_map = {
@@ -262,7 +288,6 @@ class WorkflowBundle:
                     
         Returns:
             Tuple containing:
-            - thread_id: Unique identifier for this planning session
             - config: LangGraph configuration for resuming if interrupted
             - result: Workflow execution results including agent outputs and state
             
@@ -270,14 +295,14 @@ class WorkflowBundle:
             RuntimeError: If workflow execution fails or encounters errors
         """
         active_thread = f"trip_{uuid4()}"
-        config = self._configs.get(active_thread) or self._make_config(active_thread)
+        config = self._make_config(active_thread)
 
         self._contexts[active_thread] = context
         self._configs[active_thread] = config
         self._pending_states.pop(active_thread, None)
         self._pending_interrupts.pop(active_thread, None)
 
-        messages: List[BaseMessage] = []
+        messages: List[BaseMessage] = [HumanMessage(content="Start the trip planning workflow.")]
       
         initial_state = State(messages=messages)
 
@@ -360,3 +385,52 @@ class WorkflowBundle:
 
         return active_config, result
 
+    async def final_plan(
+        self,
+        *,
+        config: Dict[str, Any],
+        selections: ResumeSelections,
+    ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
+        """Generate the final plan for the trip planning workflow."""
+        
+        active_thread = config.get("configurable", {}).get("thread_id")
+        if not active_thread:
+            raise RuntimeError("Resume config must include configurable.thread_id.")
+            
+        if active_thread not in self._contexts:
+            raise RuntimeError(f"Unknown planning thread '{active_thread}'.")
+            
+        stored_context = self._contexts[active_thread]
+        
+        result = await self.graph.ainvoke(
+            Command(resume={"selections": selections.model_dump(exclude_none=True)}),
+            context=stored_context,
+            config=config,
+        )
+        self._store_result(active_thread, result)
+        return config, result
+
+    async def extra_research(
+        self,
+        *,
+        config: Dict[str, Any],
+        research_plan: ResearchPlan,
+    ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
+        """Perform extra research for the trip planning workflow."""
+        
+        active_thread = config.get("configurable", {}).get("thread_id")
+        if not active_thread:
+            raise RuntimeError("Resume config must include configurable.thread_id.")
+
+        if active_thread not in self._contexts:
+            raise RuntimeError(f"Unknown planning thread '{active_thread}'.")
+
+        stored_context = self._contexts[active_thread]
+        
+        result = await self.graph.ainvoke(
+            Command(resume={"research_plan": research_plan.model_dump(exclude_none=True)}),
+            context=stored_context,
+            config=config,
+        )   
+        self._store_result(active_thread, result)
+        return config, result
