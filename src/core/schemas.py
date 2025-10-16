@@ -11,7 +11,7 @@ Key model categories:
 - *AgentOutput: Structured outputs from specialized research agents
 - FinalPlan: Complete day-by-day itinerary with all selections
 - State: LangGraph workflow state management
-- Context: Trip planning parameters and traveler information
+- Context: Trip planning parameters and traveller information
 """
 from __future__ import annotations
 
@@ -217,7 +217,7 @@ class CandidateIntercityTransport(BaseModel):
 
 class IntercityTransportAgentOutput(BaseModel):
     """Agent payload bundling the researched intercity transport options."""
-    transport: List[CandidateIntercityTransport]
+    intercity_transport: List[CandidateIntercityTransport]
 
     model_config = ConfigDict(extra="forbid")
 
@@ -268,18 +268,16 @@ class PlanForDay(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-
 class FinalPlan(BaseModel):
     """Completed itinerary or a follow-up research request from the planner."""
     days: Optional[List[PlanForDay]] = None
     total_budget: Optional[NonNegMoney] = None
-    lodging: Optional[CandidateLodging] = None
-    intercity_transport: Optional[CandidateIntercityTransport] = None
-    currency: Optional[ISO4217] = None
-    recommendations: Optional[RecommendationsOutput] = None
-    research_plan: Optional[ResearchPlan] = None
+    # lodging: Optional[CandidateLodging] = None
+    # intercity_transport: Optional[CandidateIntercityTransport] = None
+    # currency: Optional[ISO4217] = None
+    # recommendations: Optional[RecommendationsOutput] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
 class State(BaseModel):
     """LangGraph workflow state that flows between nodes during execution.
@@ -352,13 +350,13 @@ class Context(BaseModel):
     travellers: List[Traveller] = Field(default_factory=list)
     budget: NonNegMoney = Field(default=1000)
     currency: ISO4217 = Field(default="USD")
+    current_location: str
     destination: str
     destination_country: str
     date_from: date
     date_to: date
     group_type: Literal["family", "couple", "alone", "friends", "business"]
     trip_purpose: Optional[str] = None
-    current_location: Optional[str] = None
     notes: Optional[str] = None
 
     model_config = ConfigDict(extra="forbid")

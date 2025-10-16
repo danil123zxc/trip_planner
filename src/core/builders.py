@@ -8,6 +8,8 @@ from src.core.nodes import route_from_human_response
 from langchain_core.tools import Tool
 from typing import Sequence
 from src.core.schemas import ResearchAgents, LodgingAgentOutput, ActivitiesAgentOutput, FoodAgentOutput, IntercityTransportAgentOutput, RecommendationsOutput
+from langgraph.prebuilt import create_react_agent
+from src.core.post_processing import create_pydantic_hook
 
 def build_research_graph(
     *,
@@ -75,37 +77,25 @@ def build_research_agents(
 ) -> ResearchAgents:
     """Instantiate the REACT agents required by the workflow."""
 
-    from langgraph.prebuilt import create_react_agent
-
     return ResearchAgents(
         lodging=create_react_agent(
             llm,
-            tools=[comprehensive_search_tool],
-            debug=True,
-            response_format=LodgingAgentOutput,
+            tools=[comprehensive_search_tool]
         ),
         activities=create_react_agent(
             llm,
-            tools=[comprehensive_search_tool],
-            debug=True,
-            response_format=ActivitiesAgentOutput,
+            tools=[comprehensive_search_tool]
         ),
         food=create_react_agent(
             llm,
-            tools=[comprehensive_search_tool],
-            debug=True,
-            response_format=FoodAgentOutput,
+            tools=[comprehensive_search_tool]
         ),
         intercity_transport=create_react_agent(
             llm,
-            tools=[flight_search_tool],
-            debug=True,
-            response_format=IntercityTransportAgentOutput,
+            tools=[flight_search_tool]
         ),
         recommendations=create_react_agent(
             llm,
-            tools=list(search_tools),
-            debug=True,
-            response_format=RecommendationsOutput,
+            tools=list(search_tools)
         ),
     )

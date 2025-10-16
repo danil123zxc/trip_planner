@@ -80,10 +80,13 @@ def _result_to_response(
     # Extract intercity_transport list from nested structure
     transport_data = result.get("intercity_transport")
     transport_list = None
-    if transport_data and hasattr(transport_data, 'transport'):
-        transport_list = transport_data.transport
-    elif transport_data and isinstance(transport_data, dict) and 'transport' in transport_data:
-        transport_list = transport_data['transport']
+    if transport_data and hasattr(transport_data, 'intercity_transport'):
+        transport_list = transport_data.intercity_transport
+    elif transport_data and isinstance(transport_data, dict):
+        if 'intercity_transport' in transport_data:
+            transport_list = transport_data['intercity_transport']
+        elif 'transport' in transport_data:  # backward compatibility
+            transport_list = transport_data['transport']
     elif transport_data and isinstance(transport_data, list):
         transport_list = transport_data
 

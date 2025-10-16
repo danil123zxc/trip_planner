@@ -164,7 +164,7 @@ def stub_components(monkeypatch) -> Tuple[StubLLM, ResearchAgents]:
         activities=DummyAgent(ActivitiesAgentOutput(activities=activity_options)),
         food=DummyAgent(FoodAgentOutput(food=food_options)),
         intercity_transport=DummyAgent(
-            IntercityTransportAgentOutput(transport=transport_options)
+            IntercityTransportAgentOutput(intercity_transport=transport_options)
         ),
         recommendations=DummyAgent(
             RecommendationsOutput(safety_level="moderate", child_friendly_rating=3)
@@ -382,4 +382,4 @@ async def test_compiled_graph_interrupt_resume(sample_context, stub_components):
 
     assert resumed["final_plan"] == llm.responses[FinalPlan]
     assert resumed["lodging"]["lodging"][0]["name"] == "Hotel Aurora"
-    assert resumed["intercity_transport"]["transport"][0]["name"] == "Bullet Train"
+    assert resumed["intercity_transport"]["intercity_transport"][0]["name"] == "Bullet Train"

@@ -22,7 +22,6 @@ from src.core.schemas import ResearchPlan, Context, State
 from langchain_xai import ChatXAI
 
 
-
 REQUIRED_SETTINGS = [
     "openai_api_key",
     "tavily_api_key",

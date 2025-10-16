@@ -125,11 +125,11 @@ class TestReducer:
         
         # Transport
         transport_result = reducer(
-            IntercityTransportAgentOutput(transport=[
+            IntercityTransportAgentOutput(intercity_transport=[
                 CandidateIntercityTransport(name="Flight 1", price=100)
             ]),
-            IntercityTransportAgentOutput(transport=[
+            IntercityTransportAgentOutput(intercity_transport=[
                 CandidateIntercityTransport(name="Flight 2", price=150)
             ])
         )
-        assert len(transport_result.transport) == 2
+        assert len(transport_result.intercity_transport) == 2

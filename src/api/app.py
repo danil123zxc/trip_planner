@@ -190,7 +190,7 @@ async def final_plan(payload: FinalPlanRequest) -> PlanningResponse:
     logger.info("Converting result to response")
     response = _result_to_response(config, result)
     logger.debug("Final plan response: {response}", response=response)
-    return response.final_plan
+    return response
 
 @app.post("/plan/cleanup_threads", response_model=int)
 async def cleanup_threads() -> int:
