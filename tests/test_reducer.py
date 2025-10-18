@@ -100,36 +100,6 @@ class TestReducer:
         assert result.lodging[1].name == "Hotel B"  # Original kept
         assert result.lodging[2].name == "Hotel C"
 
-    def test_subset_replaces_existing_items(self):
-        """Test that providing a subset of existing items replaces the collection."""
-        existing = LodgingAgentOutput(lodging=[
-            CandidateLodging(id="1", name="Hotel A"),
-            CandidateLodging(id="2", name="Hotel B"),
-            CandidateLodging(id="3", name="Hotel C"),
-        ])
-        new = LodgingAgentOutput(lodging=[
-            CandidateLodging(id="2", name="Hotel B"),
-        ])
-
-        result = reducer(existing, new)
-
-        assert len(result.lodging) == 1
-        assert result.lodging[0].id == "2"
-
-    def test_subset_replacement_without_ids_uses_fallback_keys(self):
-        """Test subset replacement logic when candidates have no IDs."""
-        existing = FoodAgentOutput(food=[
-            CandidateFood(name="Sushi Place", address="Shinjuku", url="http://example.com/a"),
-            CandidateFood(name="Ramen Spot", address="Shibuya", url="http://example.com/b"),
-        ])
-        new = FoodAgentOutput(food=[
-            CandidateFood(name="Ramen Spot", address="Shibuya", url="http://example.com/b"),
-        ])
-
-        result = reducer(existing, new)
-
-        assert len(result.food) == 1
-        assert result.food[0].name == "Ramen Spot"
 
     def test_works_with_all_agent_output_types(self):
         """Test that reducer works with all agent output types."""

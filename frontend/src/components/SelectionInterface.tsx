@@ -1,312 +1,355 @@
-import React, { useState } from 'react';
-import { PlanningResponse, CandidateLodging, CandidateActivity, CandidateFood, CandidateIntercityTransport, ResumeSelections } from '../types/api';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  PlanningResponse,
+  CandidateLodging,
+  CandidateActivity,
+  CandidateFood,
+  CandidateIntercityTransport,
+  ResumeSelections,
+  ResearchPlan,
+} from '../types/api';
+import ResearchPlanForm from './ResearchPlanForm';
 
 interface SelectionInterfaceProps {
   response: PlanningResponse;
   onConfirm: (selections: ResumeSelections) => void;
   onCancel: () => void;
+  onExtraResearch?: (researchPlan: ResearchPlan) => Promise<void> | void;
   isLoading?: boolean;
 }
 
-const SelectionInterface: React.FC<SelectionInterfaceProps> = ({ 
-  response, 
-  onConfirm, 
-  onCancel, 
-  isLoading = false 
-}) => {
-  const [selections, setSelections] = useState<ResumeSelections>({
-    lodging: undefined,
-    intercity_transport: undefined,
-    activities: [],
-    food: []
-  });
+type CandidateType = 'lodging' | 'transport' | 'activity' | 'food';
 
-  const { lodging, activities, food, intercity_transport } = response;
+type CandidateIdentity = {
+  id?: string | null;
+  name?: string | null;
+};
+
+const makeCandidateKey = (item: CandidateIdentity | undefined): string => {
+  if (!item) {
+    return '';
+  }
+
+  if (item.id && typeof item.id === 'string' && item.id.trim().length > 0) {
+    return `id:${item.id.trim()}`;
+  }
+
+  if (item.name && typeof item.name === 'string' && item.name.trim().length > 0) {
+    return `name:${item.name.trim()}`;
+  }
+
+  try {
+    return `hash:${JSON.stringify(item)}`;
+  } catch {
+    return 'hash:unknown';
+  }
+};
+
+const SelectionInterface: React.FC<SelectionInterfaceProps> = ({
+  response,
+  onConfirm,
+  onCancel,
+  onExtraResearch,
+  isLoading = false,
+}) => {
+  const [selectedLodging, setSelectedLodging] = useState<CandidateLodging | undefined>(undefined);
+  const [selectedTransport, setSelectedTransport] =
+    useState<CandidateIntercityTransport | undefined>(undefined);
+  const [selectedActivityMap, setSelectedActivityMap] = useState<
+    Map<string, CandidateActivity>
+  >(new Map());
+  const [selectedFoodMap, setSelectedFoodMap] = useState<Map<string, CandidateFood>>(new Map());
+  const [extraResearchLoading, setExtraResearchLoading] = useState(false);
+
+  const { lodging, activities, food, intercity_transport, research_plan } = response;
 
   const handleLodgingSelect = (option: CandidateLodging) => {
-    setSelections(prev => ({ ...prev, lodging: option }));
+    setSelectedLodging(option);
   };
 
   const handleTransportSelect = (option: CandidateIntercityTransport) => {
-    setSelections(prev => ({ ...prev, intercity_transport: option }));
+    setSelectedTransport(option);
   };
 
   const handleActivityToggle = (activity: CandidateActivity) => {
-    setSelections(prev => {
-      const currentActivities = prev.activities || [];
-      const isSelected = currentActivities.some(a => a.id === activity.id || a.name === activity.name);
-      
-      if (isSelected) {
-        return {
-          ...prev,
-          activities: currentActivities.filter(a => a.id !== activity.id && a.name !== activity.name)
-        };
+    const key = makeCandidateKey(activity);
+    setSelectedActivityMap((prev) => {
+      const next = new Map(prev);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        return {
-          ...prev,
-          activities: [...currentActivities, activity]
-        };
+        next.set(key, activity);
       }
+      return next;
     });
   };
 
   const handleFoodToggle = (foodOption: CandidateFood) => {
-    setSelections(prev => {
-      const currentFood = prev.food || [];
-      const isSelected = currentFood.some(f => f.id === foodOption.id || f.name === foodOption.name);
-      
-      if (isSelected) {
-        return {
-          ...prev,
-          food: currentFood.filter(f => f.id !== foodOption.id && f.name !== foodOption.name)
-        };
+    const key = makeCandidateKey(foodOption);
+    setSelectedFoodMap((prev) => {
+      const next = new Map(prev);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        return {
-          ...prev,
-          food: [...currentFood, foodOption]
-        };
+        next.set(key, foodOption);
       }
+      return next;
     });
   };
 
-  const isActivitySelected = (activity: CandidateActivity) => {
-    return selections.activities?.some(a => a.id === activity.id || a.name === activity.name) || false;
+  const selectedActivities = useMemo(
+    () => Array.from(selectedActivityMap.values()),
+    [selectedActivityMap],
+  );
+
+  const selectedFood = useMemo(() => Array.from(selectedFoodMap.values()), [selectedFoodMap]);
+
+  const isActivitySelected = (activity: CandidateActivity): boolean => {
+    return selectedActivityMap.has(makeCandidateKey(activity));
   };
 
-  const isFoodSelected = (foodOption: CandidateFood) => {
-    return selections.food?.some(f => f.id === foodOption.id || f.name === foodOption.name) || false;
+  const isFoodSelected = (foodOption: CandidateFood): boolean => {
+    return selectedFoodMap.has(makeCandidateKey(foodOption));
   };
 
-  const canConfirm = () => {
-    return selections.lodging && selections.intercity_transport;
-  };
+  const canConfirm = useMemo(() => {
+    return Boolean(selectedLodging && selectedTransport);
+  }, [selectedLodging, selectedTransport]);
 
   const handleConfirm = () => {
-    if (canConfirm()) {
-      onConfirm(selections);
+    if (canConfirm) {
+      if (!selectedLodging || !selectedTransport) {
+        return;
+      }
+
+      const payload: ResumeSelections = {
+        lodging: selectedLodging,
+        intercity_transport: selectedTransport,
+        activities: selectedActivities.length > 0 ? selectedActivities : [],
+        food: selectedFood.length > 0 ? selectedFood : [],
+      };
+
+      onConfirm(payload);
     }
   };
 
+  const handleExtraResearchSubmit = async (plan: ResearchPlan) => {
+    if (!onExtraResearch) {
+      return;
+    }
+
+    setExtraResearchLoading(true);
+    try {
+      await onExtraResearch(plan);
+    } finally {
+      setExtraResearchLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Reset selections whenever a new response payload arrives
+    setSelectedLodging(undefined);
+    setSelectedTransport(undefined);
+    setSelectedActivityMap(new Map());
+    setSelectedFoodMap(new Map());
+  }, [response]);
+
   const renderSelectableCard = (
-    item: any, 
-    type: 'lodging' | 'transport' | 'activity' | 'food',
-    isSelected: boolean = false,
-    onSelect: () => void
-  ) => (
-    <div 
-      key={item.id || item.name} 
-      className={`card cursor-pointer transition-all duration-200 ${
-        isSelected 
-          ? 'ring-2 ring-primary-500 bg-primary-50' 
-          : 'hover:shadow-md hover:border-primary-300'
-      }`}
-      onClick={onSelect}
-    >
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-        <div className="flex items-center space-x-2">
-          {item.rating && (
-            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-              ⭐ {item.rating}
-            </span>
-          )}
-          {isSelected && (
-            <span className="bg-primary-100 text-primary-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-              ✓ Selected
-            </span>
-          )}
+    item: any,
+    type: CandidateType,
+    isSelected: boolean,
+    onSelect: () => void,
+  ) => {
+    const chipClass = isSelected
+      ? 'ring-2 ring-primary-500 bg-primary-50'
+      : 'hover:shadow-md hover:border-primary-300';
+
+    return (
+      <div
+        key={item.id || item.name}
+        className={`card cursor-pointer transition-all duration-200 ${chipClass}`}
+        onClick={onSelect}
+      >
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
+          <div className="flex items-center space-x-2">
+            {item.rating && (
+              <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                Rating {item.rating}
+              </span>
+            )}
+            {isSelected && (
+              <span className="bg-primary-100 text-primary-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                Selected
+              </span>
+            )}
+          </div>
         </div>
+
+        {item.address && (
+          <p className="text-sm text-gray-600 mb-2">Address: {item.address}</p>
+        )}
+
+        {item.price_level && (
+          <p className="text-sm text-gray-600 mb-2">Price Level: {item.price_level}</p>
+        )}
+
+        {type === 'lodging' && item.price_night && (
+          <p className="text-sm text-gray-600 mb-2">Approx. {item.price_night} per night</p>
+        )}
+
+        {type === 'transport' && item.price && (
+          <p className="text-sm text-gray-600 mb-2">Fare Estimate: {item.price}</p>
+        )}
+
+        {type === 'activity' && item.duration_min && (
+          <p className="text-sm text-gray-600 mb-2">Duration: {Math.floor(item.duration_min / 60)}h {item.duration_min % 60}m</p>
+        )}
+
+        {(type === 'activity' || type === 'food') && item.tags && item.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {item.tags.map((tag: string, index: number) => (
+              <span key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {item.notes && <p className="text-sm text-gray-700 mb-3">{item.notes}</p>}
+
+        {item.url && (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+            onClick={(event) => event.stopPropagation()}
+          >
+            View Details
+          </a>
+        )}
       </div>
-      
-      {item.address && (
-        <p className="text-sm text-gray-600 mb-2">📍 {item.address}</p>
-      )}
-      
-      {item.price_level && (
-        <p className="text-sm text-gray-600 mb-2">💰 {item.price_level}</p>
-      )}
-
-      {type === 'lodging' && item.price_night && (
-        <p className="text-sm text-gray-600 mb-2">💵 ${item.price_night}/night</p>
-      )}
-
-      {type === 'transport' && item.price && (
-        <p className="text-sm text-gray-600 mb-2">💵 ${item.price}</p>
-      )}
-
-      {type === 'activity' && item.duration_min && (
-        <p className="text-sm text-gray-600 mb-2">⏱️ {Math.floor(item.duration_min / 60)}h {item.duration_min % 60}m</p>
-      )}
-
-      {type === 'activity' && item.tags && item.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {item.tags.map((tag: string, index: number) => (
-            <span key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {type === 'food' && item.tags && item.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {item.tags.map((tag: string, index: number) => (
-            <span key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-      
-      {item.notes && (
-        <p className="text-sm text-gray-700 mb-3">{item.notes}</p>
-      )}
-      
-      {item.url && (
-        <a 
-          href={item.url} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-primary-600 hover:text-primary-800 text-sm font-medium"
-          onClick={(e) => e.stopPropagation()}
-        >
-          View Details →
-        </a>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
       <div className="card">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Make Your Selections</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Review and Choose Options</h2>
         <p className="text-gray-600">
-          Please select your preferred options to continue with your trip planning. 
-          You must select at least one lodging option and one transport option.
+          Pick the lodging and transport that suit your trip. You can also add activities and dining
+          picks. When finished, continue to build the final itinerary.
         </p>
       </div>
 
-      {/* Lodging Selection */}
+      {research_plan && onExtraResearch && (
+        <ResearchPlanForm
+          initialPlan={research_plan}
+          onSubmit={handleExtraResearchSubmit}
+          isSubmitting={extraResearchLoading || isLoading}
+        />
+      )}
+
       {lodging && lodging.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">🏨 Select Lodging (Required)</h3>
+        <section>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Select Lodging (required)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {lodging.map((option) => 
+            {lodging.map((option) =>
               renderSelectableCard(
-                option, 
-                'lodging', 
-                selections.lodging?.id === option.id || selections.lodging?.name === option.name,
-                () => handleLodgingSelect(option)
-              )
+                option,
+                'lodging',
+                selectedLodging
+                  ? makeCandidateKey(selectedLodging) === makeCandidateKey(option)
+                  : false,
+                () => handleLodgingSelect(option),
+              ),
             )}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Transport Selection */}
       {intercity_transport && intercity_transport.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">🚌 Select Transport (Required)</h3>
+        <section>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Select Transport (required)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {intercity_transport.map((option) => 
+            {intercity_transport.map((option) =>
               renderSelectableCard(
-                option, 
-                'transport', 
-                selections.intercity_transport?.name === option.name,
-                () => handleTransportSelect(option)
-              )
+                option,
+                'transport',
+                selectedTransport
+                  ? makeCandidateKey(selectedTransport) === makeCandidateKey(option)
+                  : false,
+                () => handleTransportSelect(option),
+              ),
             )}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Activities Selection */}
       {activities && activities.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            🎯 Select Activities (Optional)
-            {selections.activities && selections.activities.length > 0 && (
-              <span className="text-sm font-normal text-gray-600 ml-2">
-                ({selections.activities.length} selected)
-              </span>
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold text-gray-900">Select Activities (optional)</h3>
+            {selectedActivities.length > 0 && (
+              <span className="text-sm text-gray-600">{selectedActivities.length} chosen</span>
             )}
-          </h3>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activities.map((activity) => 
+            {activities.map((activity) =>
               renderSelectableCard(
-                activity, 
-                'activity', 
+                activity,
+                'activity',
                 isActivitySelected(activity),
-                () => handleActivityToggle(activity)
-              )
+                () => handleActivityToggle(activity),
+              ),
             )}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Food Selection */}
       {food && food.length > 0 && (
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            🍽️ Select Food & Dining (Optional)
-            {selections.food && selections.food.length > 0 && (
-              <span className="text-sm font-normal text-gray-600 ml-2">
-                ({selections.food.length} selected)
-              </span>
-            )}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {food.map((foodOption) => 
-              renderSelectableCard(
-                foodOption, 
-                'food', 
-                isFoodSelected(foodOption),
-                () => handleFoodToggle(foodOption)
-              )
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold text-gray-900">Select Food and Dining (optional)</h3>
+            {selectedFood.length > 0 && (
+              <span className="text-sm text-gray-600">{selectedFood.length} chosen</span>
             )}
           </div>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {food.map((foodOption) =>
+              renderSelectableCard(
+                foodOption,
+                'food',
+                isFoodSelected(foodOption),
+                () => handleFoodToggle(foodOption),
+              ),
+            )}
+          </div>
+        </section>
       )}
 
-      {/* Action Buttons */}
       <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-        <button
-          onClick={onCancel}
-          className="btn-secondary"
-          disabled={isLoading}
-        >
+        <button onClick={onCancel} className="btn-secondary" disabled={isLoading}>
           Cancel
         </button>
-        
         <button
           onClick={handleConfirm}
-          disabled={!canConfirm() || isLoading}
+          disabled={!canConfirm || isLoading}
           className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Processing...' : 'Continue Planning'}
         </button>
       </div>
 
-      {/* Selection Summary */}
-      {(selections.lodging || selections.intercity_transport || 
-        (selections.activities && selections.activities.length > 0) || 
-        (selections.food && selections.food.length > 0)) && (
-        <div className="card bg-blue-50 border-blue-200">
-          <h4 className="font-medium text-blue-900 mb-2">Selection Summary</h4>
+      {(selectedLodging || selectedTransport || selectedActivities.length > 0 || selectedFood.length > 0) && (
+        <div className="card bg-blue-50 border border-blue-200">
+          <h4 className="font-medium text-blue-900 mb-2">Current selections</h4>
           <div className="text-sm text-blue-800 space-y-1">
-            {selections.lodging && (
-              <p>🏨 Lodging: {selections.lodging.name}</p>
-            )}
-            {selections.intercity_transport && (
-              <p>🚌 Transport: {selections.intercity_transport.name}</p>
-            )}
-            {selections.activities && selections.activities.length > 0 && (
-              <p>🎯 Activities: {selections.activities.length} selected</p>
-            )}
-            {selections.food && selections.food.length > 0 && (
-              <p>🍽️ Food: {selections.food.length} selected</p>
-            )}
+            {selectedLodging && <p>Lodging: {selectedLodging.name}</p>}
+            {selectedTransport && <p>Transport: {selectedTransport.name}</p>}
+            {selectedActivities.length > 0 && <p>Activities: {selectedActivities.length} chosen</p>}
+            {selectedFood.length > 0 && <p>Food: {selectedFood.length} chosen</p>}
           </div>
         </div>
       )}
@@ -315,4 +358,3 @@ const SelectionInterface: React.FC<SelectionInterfaceProps> = ({
 };
 
 export default SelectionInterface;
-

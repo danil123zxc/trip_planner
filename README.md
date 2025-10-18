@@ -62,6 +62,8 @@ npm start
 
 The React client renders workflow progress, interrupts, and final trip outputs in real time.
 
+> Frontend environment variables live in `frontend/.env`. Besides the defaults (`DANGEROUSLY_DISABLE_HOST_CHECK` and `GENERATE_SOURCEMAP`), you can tune long-running requests via `REACT_APP_API_TIMEOUT_MS` (defaults to 120000 ms) if the planning workflow needs more time.
+
 ### Notebook Workflow
 
 Run the canonical notebook to validate changes and keep behaviour in sync:
@@ -85,21 +87,19 @@ Start a session with the FastAPI backend running:
 curl -X POST http://localhost:8000/plan/start \
   -H "Content-Type: application/json" \
   -d '{
-        "context": {
-          "destination": "Tokyo",
-          "destination_country": "Japan",
-          "date_from": "2025-10-01",
-          "date_to": "2025-10-05",
-          "budget": 2500,
-          "currency": "USD",
-          "group_type": "couple",
-          "travellers": [
-            {"name": "Jordan", "date_of_birth": "1992-04-12"},
-            {"name": "Riley", "date_of_birth": "1991-08-03"}
-          ],
-          "trip_purpose": "cultural immersion",
-          "current_location": "San Francisco"
-        }
+        "destination": "Tokyo",
+        "destination_country": "Japan",
+        "date_from": "2025-10-01",
+        "date_to": "2025-10-05",
+        "budget": 2500,
+        "currency": "USD",
+        "group_type": "couple",
+        "travellers": [
+          {"name": "Jordan", "date_of_birth": "1992-04-12"},
+          {"name": "Riley", "date_of_birth": "1991-08-03"}
+        ],
+        "trip_purpose": "cultural immersion",
+        "current_location": "San Francisco"
       }'
 ```
 
@@ -143,4 +143,3 @@ Responses return `status="interrupt"` when human selections are required and `st
 - **API Layer:** `src/api/app.py` exposes endpoints for starting plans, resuming after selections, and requesting extra research, with responses adapted via `src/api/response_builder.py`.
 
 For deeper dives, start with `trip_planner.ipynb` and cross-reference the mirrored Python modules under `src/`.
-

@@ -419,13 +419,33 @@ Example 2 - Mid-Range Family (Paris):
   "notes": "Family-friendly amenities include playground and babysitting services"
 }}
 
-**IMPORTANT NOTES**:
-- Always use the 'location_id' from API responses as the 'id' field
-- Verify all information before including in results
-- Focus on accommodations that match the specific group needs
-- Ensure pricing is accurate and in the correct currency
-- Include a good mix of accommodation types when possible
-- Prioritize safety and suitability for the traveller group
+**STRICT OUTPUT FORMAT (MANDATORY)**:
+- Respond with a single JSON object exactly in this form:
+{{
+  "lodging": [
+    {{
+      "id": "...",
+      "name": "...",
+      "address": "...",
+      "area": "...",
+      "price_level": "...",
+      "price_night": 0.0,
+      "rating": 0.0,
+      "reviews": ["..."],
+      "photos": ["..."],
+      "url": "...",
+      "lat": 0.0,
+      "lon": 0.0,
+      "cancel_policy": "...",
+      "evidence_score": 0.0,
+      "source_id": "...",
+      "notes": "..."
+    }}
+  ]
+}}
+- Provide exactly {candidates_number} lodging objects in the array.
+- Output MUST be valid JSON without markdown fences, comments, or trailing commas.
+- Omit fields only if information is unavailable; otherwise ensure values are accurate and justified.
 
 {additional_context}"""
 
@@ -590,14 +610,35 @@ Example 3 - Solo traveller Activity (Bangkok):
   "notes": "Small group tour, includes all food tastings, vegetarian options available"
 }}
 
-**IMPORTANT NOTES**:
-- Always use the 'location_id' from API responses as the 'id' field
-- Include a mix of free and paid activities to provide options
-- Consider traveller interests when selecting activities
-- Verify operating hours and seasonal availability
-- Ensure activities are suitable for the group type and age ranges
-- Include activities that showcase local culture and highlights
-- Focus on experiences that align with the trip purpose
+**STRICT OUTPUT FORMAT (MANDATORY)**:
+- Return ONLY a single JSON object matching this schema exactly:
+{{
+  "activities": [
+    {{
+      "id": "...",
+      "name": "...",
+      "address": "...",
+      "price_level": "...",
+      "rating": 0.0,
+      "reviews": ["..."],
+      "photos": ["..."],
+      "url": "...",
+      "lat": 0.0,
+      "lon": 0.0,
+      "open_time": "HH:MM",
+      "close_time": "HH:MM",
+      "duration_min": 0,
+      "price": 0.0,
+      "tags": ["..."],
+      "evidence_score": 0.0,
+      "source_id": "...",
+      "notes": "..."
+    }}
+  ]
+}}
+- The `activities` array MUST contain exactly {candidates_number} entries.
+- No markdown, commentary, or additional keys are allowed—output raw JSON only.
+- Use numeric types for numbers, strings for text, and omit any fields you cannot substantiate.
 
 {additional_context}"""
 
@@ -787,15 +828,33 @@ Example 4 - Group Dining (New York):
   "notes": "Family-style portions perfect for groups, near Broadway theaters, reservations recommended"
 }}
 
-**IMPORTANT NOTES**:
-- Always use the 'location_id' from API responses as the 'id' field
-- Include a mix of local cuisine and international options when appropriate
-- Consider dietary restrictions and preferences of travellers
-- Verify reservation requirements and booking policies
-- Include both casual and upscale dining options
-- Focus on restaurants that showcase local culinary culture
-- Ensure operating hours align with typical meal times
-- Consider location convenience for the trip itinerary
+**STRICT OUTPUT FORMAT (MANDATORY)**:
+- Reply with exactly one JSON object shaped like this:
+{{
+  "food": [
+    {{
+      "id": "...",
+      "name": "...",
+      "address": "...",
+      "price_level": "...",
+      "rating": 0.0,
+      "reviews": ["..."],
+      "photos": ["..."],
+      "url": "...",
+      "lat": 0.0,
+      "lon": 0.0,
+      "open_time": "HH:MM",
+      "close_time": "HH:MM",
+      "tags": ["..."],
+      "evidence_score": 0.0,
+      "source_id": "...",
+      "notes": "..."
+    }}
+  ]
+}}
+- The `food` array must include exactly {candidates_number} dining options.
+- Output must be valid JSON only—no markdown fences, explanations, or additional fields.
+- All values must be standard JSON types; omit a field entirely if data is unavailable.
 
 {additional_context}"""
 
@@ -959,15 +1018,33 @@ Example 4 - Budget Group Travel (Bangkok to Singapore):
   "note": "Overnight bus, includes dinner and breakfast, border crossing assistance"
 }}
 
-**IMPORTANT NOTES**:
-- Always verify current schedules and pricing
-- Consider visa requirements and border crossing times
-- Include realistic layover times for connections
-- Account for time zone differences in duration calculations
-- Consider seasonal variations in pricing and availability
-- Include important booking requirements or restrictions
-- Focus on reliable transportation providers with good safety records
-- Ensure options are suitable for the group size and type
+**STRICT OUTPUT FORMAT (MANDATORY)**:
+- Return a single JSON object in the exact structure below:
+{{
+  "intercity_transport": [
+    {{
+      "name": "...",
+      "fare_class": "...",
+      "refundable": true,
+      "url": "...",
+      "price": 0.0,
+      "transfer": [
+        {{
+          "name": "...",
+          "place": "...",
+          "departure_time": "HH:MM",
+          "arrival_time": "HH:MM",
+          "duration_min": 0
+        }}
+      ],
+      "total_duration_min": 0,
+      "note": "..."
+    }}
+  ]
+}}
+- Provide exactly {candidates_number} transport options in the array.
+- Output MUST be raw JSON (no markdown fences, comments, or descriptive text).
+- Use `null` only for optional fields; ensure all numbers and strings are valid JSON values.
 
 {additional_context}"""
 
@@ -1197,13 +1274,31 @@ Example 2 - Solo Travel to Thailand:
   }}
 }}
 
-**IMPORTANT NOTES**:
-- Always verify current information, especially regarding safety and visa requirements
-- Consider the specific needs of the traveller group
-- Provide balanced information including both positive aspects and potential challenges
-- Include practical, actionable advice that travellers can implement
-- Focus on cultural sensitivity and respect for local customs
-- Ensure recommendations are appropriate for the travel dates and season
+**STRICT OUTPUT FORMAT (MANDATORY)**:
+- Output must be a single JSON object containing only the keys defined in the RecommendationsOutput schema, for example:
+{{
+  "safety_level": "safe",
+  "safety_notes": ["..."],
+  "travel_advisories": ["..."],
+  "visa_requirements": {{"USA": "..."}},
+  "cultural_considerations": ["..."],
+  "dress_code_recommendations": ["..."],
+  "local_customs": ["..."],
+  "language_barriers": ["..."],
+  "child_friendly_rating": 4,
+  "infant_considerations": ["..."],
+  "elderly_accessibility": ["..."],
+  "weather_conditions": "...",
+  "seasonal_considerations": ["..."],
+  "best_time_to_visit": "...",
+  "currency_info": "...",
+  "payment_methods": ["..."],
+  "religious_restrictions": ["..."],
+  "dietary_restrictions_support": {{"vegetarian": true}}
+}}
+- Include only keys you can support with evidence; omit unavailable fields entirely.
+- The response must be raw JSON with no markdown fences, comments, or explanatory text.
+- Ensure all arrays, objects, numbers, booleans, and strings are valid JSON literals.
 
 {additional_context}"""
 
