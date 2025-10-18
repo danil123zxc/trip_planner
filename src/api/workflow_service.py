@@ -271,7 +271,12 @@ class WorkflowBundle:
         stored_context = self._contexts[active_thread]
         
         result = await self.graph.ainvoke(
-            Command(resume={"selections": selections.model_dump(exclude_none=True)}),
+            Command(resume={
+                "lodging": selections.lodging, 
+                "activities": selections.activities, 
+                "food": selections.food, 
+                "intercity_transport": selections.intercity_transport
+            }),
             context=stored_context,
             config=config,
         )

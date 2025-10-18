@@ -29,12 +29,35 @@ def reducer(existing: Optional[T], new: Optional[T]) -> Optional[T]:
     # Get the existing and new lists
     existing_items = getattr(existing, list_field_name, []) or []
     new_items = getattr(new, list_field_name, []) or []
-    
+
     logger.info(f"Reducer: Merging {list_field_name} - existing: {len(existing_items)}, new: {len(new_items)}")
-    
+
+    if existing_items and new_items:
+        def _candidate_key(item):
+            item_id = getattr(item, "id", None)
+            if item_id:
+                return ("id", item_id)
+            name = getattr(item, "name", None)
+            url = getattr(item, "url", None)
+            address = getattr(item, "address", None)
+            return ("fallback", name, url, address)
+
+        existing_ids_with_values = {getattr(item, "id", None) for item in existing_items if getattr(item, "id", None)}
+        new_ids_with_values = {getattr(item, "id", None) for item in new_items if getattr(item, "id", None)}
+
+        existing_keys = {_candidate_key(item) for item in existing_items}
+        new_keys = [_candidate_key(item) for item in new_items]
+
+        subset_by_id = bool(new_ids_with_values) and new_ids_with_values.issubset(existing_ids_with_values)
+        subset_by_key = not new_ids_with_values and all(key in existing_keys for key in new_keys)
+
+        if len(new_items) <= len(existing_items) and (subset_by_id or subset_by_key):
+            logger.info("Reducer: New collection is a subset of existing items; replacing existing list")
+            return output_type(**{list_field_name: new_items})
+
     # Build a set of existing IDs for deduplication
     existing_ids = {item.id for item in existing_items if hasattr(item, 'id') and item.id}
-    
+
     # Start with all existing items
     merged_items = list(existing_items)
     

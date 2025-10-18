@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-from typing import Dict, Annotated, Any
-from fastapi import FastAPI, HTTPException, Form, Depends
+from typing import Dict, Any
+from fastapi import FastAPI, HTTPException
 from src.api.schemas import PlanRequest, PlanningResponse, ExtraResearchRequest, FinalPlanRequest
 import logging
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,16 +34,22 @@ else:  # pragma: no cover - runtime configuration
 
 app = FastAPI(title="Trip Planner API", version="0.1.0", lifespan=lifespan)
 
+origins = [
+    "http://localhost:3000",
+    "http://localhost:3001"
+]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 @app.post("/plan/start", response_model=PlanningResponse)
-async def start_planning(payload: Annotated[PlanRequest, Depends()]) -> PlanningResponse:
+async def start_planning(payload: PlanRequest) -> PlanningResponse:
     """Start the AI-powered trip planning workflow.
     
     This endpoint initiates the LangGraph-based trip planning process that coordinates
@@ -73,49 +79,28 @@ async def start_planning(payload: Annotated[PlanRequest, Depends()]) -> Planning
     Raises:
         HTTPException: 400 for invalid input, 500 for workflow errors
         
-    Example:
-        POST /plan/start with:
+    Example JSON payload:
         ```json
         {
-            "context": {
-                "destination": "Tokyo, Japan",
-                "date_from": "2025-10-01",
-                "date_to": "2025-10-05",
-                "budget": 1000,
-                "currency": "USD",
-                "group_type": "alone",
-                "travellers": [{"name": "John", "date_of_birth": "1990-01-01"}]
-            }
+            "travellers": [
+                {
+                    "name": "John",
+                    "date_of_birth": "1990-01-01",
+                    "spoken_languages": ["english"],
+                    "interests": ["culture"]
+                }
+            ],
+            "budget": 1000,
+            "currency": "USD",
+            "current_location": "Seoul",
+            "destination": "Tokyo",
+            "destination_country": "Japan",
+            "date_from": "2025-10-01",
+            "date_to": "2025-10-05",
+            "group_type": "alone",
+            "trip_purpose": "cultural experience"
         }
         ```
-    ```json
-        {
-            "context": 
-            {
-                "travellers": [
-                {
-                    "name": "Danil",
-                    "date_of_birth": "2002-09-29",
-                    "spoken_languages": [
-                    "english"
-                    ],
-                    "interests": [
-                    "active sports"
-                    ],
-                    "nationality": "russian"      }
-                ],
-                "budget": 1000,
-                "currency": "USD",
-                "destination": "Tokyo",
-                "destination_country": "Japan",
-                "date_from": "2025-10-01",
-                "date_to": "2025-10-05",
-                "group_type": "alone",
-                "trip_purpose": "cultural experience",
-                "current_location": "Seoul"
-            }
-        }
-    ```
     """
 
     logger.info("Starting new trip planning request")

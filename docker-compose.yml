@@ -2,25 +2,32 @@ version: "3.9"
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
     image: trip-planner-app
     container_name: trip-planner-app
-    ports:
-      - "8000:8000"
     env_file:
       - .env
-    volumes:
-      - ./src:/app/src:ro
+    ports:
+      - "8000:8000"
     command: ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
 
   tests:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        INSTALL_EXTRAS: testing
     image: trip-planner-tests
     container_name: trip-planner-tests
-    environment:
-      PYTHONUNBUFFERED: "1"
+    env_file:
+      - .env
+    command: ["pytest"]
     volumes:
-      - ./src:/app/src:ro
       - ./tests:/app/tests:ro
-      - ./vendor:/app/vendor:ro
-    command: ["pytest", "tests/test_workflow_nodes.py"]
+      - ./docs:/app/docs:ro
+      - ./trip_planner.ipynb:/app/trip_planner.ipynb:ro

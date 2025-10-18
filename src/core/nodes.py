@@ -527,38 +527,26 @@ def make_combined_human_review_node():
         # Handle activities - could be single dict or list of dicts
         if "activities" in result and result["activities"]:
             activities_data = result["activities"]
-            # Ensure it's a list
-            if isinstance(activities_data, dict):
-                activities_data = [activities_data]
-            selected_activities = [CandidateActivity(**activity) for activity in activities_data]
-            response["activities"] = ActivitiesAgentOutput(activities=selected_activities).model_dump()
+            
+            response["activities"] = ActivitiesAgentOutput(activities=activities_data)
 
         # Handle food - could be single dict or list of dicts
         if "food" in result and result["food"]:
             food_data = result["food"]
-            # Ensure it's a list
-            if isinstance(food_data, dict):
-                food_data = [food_data]
-            selected_foods = [CandidateFood(**food_item) for food_item in food_data]
-            response["food"] = FoodAgentOutput(food=selected_foods).model_dump()
+
+            response["food"] = FoodAgentOutput(food=food_data)
 
         # Handle lodging - expecting single dict but wrap in list for LodgingAgentOutput
         if "lodging" in result and result["lodging"]:
             lodging_data = result["lodging"]
-            # Ensure it's a list for the output model
-            if isinstance(lodging_data, dict):
-                lodging_data = [lodging_data]
-            selected_lodgings = [CandidateLodging(**lodging) for lodging in lodging_data]
-            response["lodging"] = LodgingAgentOutput(lodging=selected_lodgings).model_dump()
+           
+            response["lodging"] = LodgingAgentOutput(lodging=lodging_data)
 
         # Handle intercity_transport - expecting single dict but wrap in list for IntercityTransportAgentOutput
         if "intercity_transport" in result and result["intercity_transport"]:
             transport_data = result["intercity_transport"]
-            # Ensure it's a list for the output model
-            if isinstance(transport_data, dict):
-                transport_data = [transport_data]
-            selected_transport = [CandidateIntercityTransport(**transport) for transport in transport_data]
-            response["intercity_transport"] = IntercityTransportAgentOutput(intercity_transport=selected_transport).model_dump()
+        
+            response["intercity_transport"] = IntercityTransportAgentOutput(intercity_transport=transport_data)
 
         return response
 

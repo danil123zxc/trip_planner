@@ -272,10 +272,7 @@ class FinalPlan(BaseModel):
     """Completed itinerary or a follow-up research request from the planner."""
     days: Optional[List[PlanForDay]] = None
     total_budget: Optional[NonNegMoney] = None
-    # lodging: Optional[CandidateLodging] = None
-    # intercity_transport: Optional[CandidateIntercityTransport] = None
-    # currency: Optional[ISO4217] = None
-    # recommendations: Optional[RecommendationsOutput] = None
+
 
     model_config = ConfigDict(extra="allow")
 

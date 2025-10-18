@@ -11,12 +11,12 @@ class PlanRequest(Context):
 class ResumeSelections(BaseModel):
     """Indices of options chosen during human-in-the-loop review."""
 
-    lodging: CandidateLodging = Field(
-        default_factory=CandidateLodging,
+    lodging: List[CandidateLodging] = Field(
+        default_factory=list,
         description="Selected lodging option.",
     )
-    intercity_transport: CandidateIntercityTransport = Field(
-        default_factory=CandidateIntercityTransport,
+    intercity_transport: List[CandidateIntercityTransport] = Field(
+        default_factory=list,
         description="Selected intercity transport option.",
     )
     activities: List[CandidateActivity] = Field(

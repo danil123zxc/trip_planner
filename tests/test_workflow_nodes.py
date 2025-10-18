@@ -182,6 +182,44 @@ def base_state() -> State:
 # ---------------------------------------------------------------------------
 # Node-level tests
 # ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_combined_human_review_node_resume_returns_models(sample_context, monkeypatch):
+    state = State(
+        messages=[],
+        research_plan=ResearchPlan(lodging_candidates=CandidateResearch(candidates_number=2)),
+        lodging=LodgingAgentOutput(lodging=[CandidateLodging(name="Hotel Aurora")]),
+        activities=ActivitiesAgentOutput(activities=[CandidateActivity(name="Sushi Workshop")]),
+        food=FoodAgentOutput(food=[CandidateFood(name="Ramen House")]),
+        intercity_transport=IntercityTransportAgentOutput(
+            intercity_transport=[CandidateIntercityTransport(name="Bullet Train")]
+        ),
+    )
+    runtime = Runtime(context=sample_context)
+
+    def fake_interrupt(payload):
+        assert {item["type"] for item in payload["selections"]} == {
+            "lodging", "activities", "food", "intercity_transport"
+        }
+        return {
+            "lodging": state.lodging.lodging[0].model_dump(),
+            "activities": [state.activities.activities[0].model_dump()],
+            "food": state.food.food[0].model_dump(),              # single dict -> coverage
+            "intercity_transport": state.intercity_transport.intercity_transport[0].model_dump(),
+            "research_plan": {"lodging_candidates": {"candidates_number": 1}},
+        }
+
+    monkeypatch.setattr("src.core.nodes.interrupt", fake_interrupt)
+
+    node = make_combined_human_review_node()
+    result = await node(state, runtime)
+
+    assert isinstance(result["lodging"], LodgingAgentOutput)
+    assert isinstance(result["activities"], ActivitiesAgentOutput)
+    assert isinstance(result["food"], FoodAgentOutput)
+    assert isinstance(result["intercity_transport"], IntercityTransportAgentOutput)
+    assert isinstance(result["research_plan"], ResearchPlan)
+    assert result["lodging"].lodging[0].name == "Hotel Aurora"
+    assert result["messages"][0].content == "Human review completed"
 
 
 @pytest.mark.asyncio
@@ -383,3 +421,8 @@ async def test_compiled_graph_interrupt_resume(sample_context, stub_components):
     assert resumed["final_plan"] == llm.responses[FinalPlan]
     assert resumed["lodging"]["lodging"][0]["name"] == "Hotel Aurora"
     assert resumed["intercity_transport"]["intercity_transport"][0]["name"] == "Bullet Train"
+    assert isinstance(resumed["lodging"], LodgingAgentOutput)
+    assert resumed["lodging"].lodging[0].name == "Hotel Aurora"
+    assert isinstance(resumed["intercity_transport"], IntercityTransportAgentOutput)
+    assert resumed["intercity_transport"].intercity_transport[0].name == "Bullet Train"
+
