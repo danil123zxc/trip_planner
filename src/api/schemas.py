@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
-from src.core.domain import Context
-from src.core.domain import CandidateLodging, CandidateIntercityTransport, CandidateActivity, CandidateFood
-from src.core.domain import RecommendationsOutput, ResearchPlan, BudgetEstimate, FinalPlan
+from src.core.schemas import Context
+from src.core.schemas import CandidateLodging, CandidateIntercityTransport, CandidateActivity, CandidateFood
+from src.core.schemas import RecommendationsOutput, ResearchPlan, BudgetEstimate, FinalPlan
 
 class PlanRequest(Context):
     """Request payload used to start a new planning run."""
@@ -11,12 +11,12 @@ class PlanRequest(Context):
 class ResumeSelections(BaseModel):
     """Indices of options chosen during human-in-the-loop review."""
 
-    lodging: CandidateLodging = Field(
-        default_factory=CandidateLodging,
+    lodging: List[CandidateLodging] = Field(
+        default_factory=list,
         description="Selected lodging option.",
     )
-    intercity_transport: CandidateIntercityTransport = Field(
-        default_factory=CandidateIntercityTransport,
+    intercity_transport: List[CandidateIntercityTransport] = Field(
+        default_factory=list,
         description="Selected intercity transport option.",
     )
     activities: List[CandidateActivity] = Field(
@@ -27,27 +27,6 @@ class ResumeSelections(BaseModel):
         default_factory=list,
         description="Selected food options.",
     )
-
-
-# class ResumeRequest(BaseModel):
-#     """Request payload used to resume the graph after an interrupt."""
-
-#     config: Optional[Dict[str, Any]] = Field(
-#         default=None,
-#         description="LangGraph configuration object returned by the interrupt response.",
-#     )
-#     selections: ResumeSelections = Field(
-#         default_factory=ResumeSelections,
-#         description="Indices indicating which options the user selected.",
-#     )
-#     research_plan: Optional[ResearchPlan] = Field(
-#         default=None,
-#         description="Optional overrides for the next research plan. Keys align with CandidateResearch fields.",
-#     )
-#     context: Optional[Context] = Field(
-#         default=None,
-#         description="Context of the trip being planned.(Specify only if you didn't plan the trip before)"
-#     )
 
 class FinalPlanRequest(BaseModel):
     """Request payload used to return the final plan for the trip planning workflow."""

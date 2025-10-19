@@ -6,7 +6,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from src.core.domain import (
+from src.core.schemas import (
     BudgetEstimate,
     CandidateActivity,
     CandidateFood,

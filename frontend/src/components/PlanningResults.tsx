@@ -1,12 +1,14 @@
-import React from 'react';
-import { PlanningResponse } from '../types/api';
+import React, { useState } from 'react';
+import { PlanningResponse, ResearchPlan } from '../types/api';
+import ResearchPlanForm from './ResearchPlanForm';
 
 interface PlanningResultsProps {
   response: PlanningResponse;
   onSelection?: (selections: any) => void;
+  onExtraResearch?: (researchPlan: ResearchPlan) => Promise<void> | void;
 }
 
-const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection }) => {
+const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection, onExtraResearch }) => {
   const { 
     status, 
     estimated_budget, 
@@ -16,8 +18,24 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
     intercity_transport, 
     recommendations, 
     final_plan,
-    messages 
+    messages,
+    research_plan
   } = response;
+
+  const [extraResearchLoading, setExtraResearchLoading] = useState(false);
+
+  const handleExtraResearchSubmit = async (plan: ResearchPlan) => {
+    if (!onExtraResearch) {
+      return;
+    }
+
+    setExtraResearchLoading(true);
+    try {
+      await onExtraResearch(plan);
+    } finally {
+      setExtraResearchLoading(false);
+    }
+  };
 
   const renderCandidateCard = (candidate: any, type: string) => (
     <div key={candidate.id || candidate.name} className="card">
@@ -25,17 +43,17 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
         <h3 className="text-lg font-semibold text-gray-900">{candidate.name}</h3>
         {candidate.rating && (
           <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-            ⭐ {candidate.rating}
+            Rating {candidate.rating}
           </span>
         )}
       </div>
       
       {candidate.address && (
-        <p className="text-sm text-gray-600 mb-2">📍 {candidate.address}</p>
+        <p className="text-sm text-gray-600 mb-2">Address: {candidate.address}</p>
       )}
       
       {candidate.price_level && (
-        <p className="text-sm text-gray-600 mb-2">💰 {candidate.price_level}</p>
+        <p className="text-sm text-gray-600 mb-2">Price Level: {candidate.price_level}</p>
       )}
       
       {candidate.notes && (
@@ -49,7 +67,7 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
           rel="noopener noreferrer"
           className="text-primary-600 hover:text-primary-800 text-sm font-medium"
         >
-          View Details →
+          View Details &gt;
         </a>
       )}
     </div>
@@ -219,6 +237,8 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
     </div>
   );
 
+  
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Status Banner */}
@@ -247,6 +267,11 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
             Please review and select your preferred options to continue planning.
           </p>
         )}
+        {status === 'needs_follow_up' && (
+          <p className="mt-2 text-sm text-gray-600">
+            Additional research is available. Review the focus areas below and request another round when ready.
+          </p>
+        )}
       </div>
 
       {/* Budget Estimate */}
@@ -258,10 +283,19 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
       {/* Final Plan */}
       {final_plan && renderFinalPlan(final_plan)}
 
+      {/* Research Plan */}
+      {status === 'needs_follow_up' && research_plan && onExtraResearch && (
+        <ResearchPlanForm
+          initialPlan={research_plan}
+          onSubmit={handleExtraResearchSubmit}
+          isSubmitting={extraResearchLoading}
+        />
+      )}
+
       {/* Lodging Options */}
       {lodging && lodging.length > 0 && (
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">🏨 Lodging Options</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Lodging Options</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {lodging.map((option) => renderCandidateCard(option, 'lodging'))}
           </div>
@@ -271,7 +305,7 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
       {/* Activities */}
       {activities && activities.length > 0 && (
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">🎯 Activities</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Activities</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activities.map((activity) => renderCandidateCard(activity, 'activity'))}
           </div>
@@ -281,7 +315,7 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
       {/* Food Options */}
       {food && food.length > 0 && (
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">🍽️ Food & Dining</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Food & Dining</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {food.map((option) => renderCandidateCard(option, 'food'))}
           </div>
@@ -291,7 +325,7 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
       {/* Transport Options */}
       {intercity_transport && intercity_transport.length > 0 && (
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">🚌 Transport Options</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Transport Options</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {intercity_transport.map((option) => renderCandidateCard(option, 'transport'))}
           </div>
@@ -316,4 +350,3 @@ const PlanningResults: React.FC<PlanningResultsProps> = ({ response, onSelection
 };
 
 export default PlanningResults;
-

@@ -75,7 +75,7 @@ def create_trip_advisor_tools(client: TripAdvisor) -> Tool:
     return StructuredTool.from_function(
             coroutine=comprehensive,
             name="comprehensive_search_tool",
-            description="Perform complete location research: search + details + photos + reviews in one operation. Most comprehensive but slower. Input: ComprehensiveLocationInput object with searchQuery (required) and optional parameters: latLong, category (attractions/restaurants/geos/hotels), phone, address, radius, radiusUnit (km/mi/m), language (default: en), limit_locations (default: 5), photos_limit (default: 10), reviews_limit (default: 10), currency (default: USD), offset_photos, offset_reviews.",
+            description="Perform complete location research: search + details + photos + reviews in one operation. ",
             args_schema=ComprehensiveLocationInput,
         )
     

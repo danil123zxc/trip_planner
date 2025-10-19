@@ -6,11 +6,11 @@ from typing import Any, Dict, List, Tuple, Type
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.graph import CompiledStateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
 from langgraph.types import Command
 
-from src.core.domain import (
+from src.core.schemas import (
     ActivitiesAgentOutput,
     CandidateActivity,
     CandidateFood,
@@ -25,10 +25,11 @@ from src.core.domain import (
     RecommendationsOutput,
     ResearchPlan,
     State,
+    ResearchAgents
 )
-from src.workflows import planner
-
-
+from src.core.nodes import make_budget_estimate_node, make_research_plan_node, make_lodging_node, make_activities_node, make_food_node, make_intercity_transport_node, make_recommendations_node, make_planner_node, make_combined_human_review_node, route_from_human_response
+from src.core.builders import build_research_graph
+from src.core.schemas import BudgetEstimate
 # ---------------------------------------------------------------------------
 # Test doubles
 # ---------------------------------------------------------------------------
@@ -102,15 +103,15 @@ def sample_context() -> Context:
 
 
 @pytest.fixture
-def stub_components(monkeypatch) -> Tuple[StubLLM, planner.ResearchAgents]:
+def stub_components(monkeypatch) -> Tuple[StubLLM, ResearchAgents]:
     monkeypatch.setattr(
-        planner, "get_coordinates_nominatim", lambda *_, **__: "35.6895,139.6917"
+        "get_coordinates_nominatim", lambda *_, **__: "35.6895,139.6917"
     )
 
     llm = StubLLM()
     llm.set_response(
-        planner.BudgetEstimate,
-        planner.BudgetEstimate(
+        BudgetEstimate,
+        BudgetEstimate(
             budget_level="$$",
             currency="USD",
             intercity_transport=400,
@@ -158,12 +159,12 @@ def stub_components(monkeypatch) -> Tuple[StubLLM, planner.ResearchAgents]:
     )
     llm.set_response(FinalPlan, final_plan)
 
-    agents = planner.ResearchAgents(
+    agents = ResearchAgents(
         lodging=DummyAgent(LodgingAgentOutput(lodging=lodging_options)),
         activities=DummyAgent(ActivitiesAgentOutput(activities=activity_options)),
         food=DummyAgent(FoodAgentOutput(food=food_options)),
         intercity_transport=DummyAgent(
-            IntercityTransportAgentOutput(transport=transport_options)
+            IntercityTransportAgentOutput(intercity_transport=transport_options)
         ),
         recommendations=DummyAgent(
             RecommendationsOutput(safety_level="moderate", child_friendly_rating=3)
@@ -181,6 +182,44 @@ def base_state() -> State:
 # ---------------------------------------------------------------------------
 # Node-level tests
 # ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_combined_human_review_node_resume_returns_models(sample_context, monkeypatch):
+    state = State(
+        messages=[],
+        research_plan=ResearchPlan(lodging_candidates=CandidateResearch(candidates_number=2)),
+        lodging=LodgingAgentOutput(lodging=[CandidateLodging(name="Hotel Aurora")]),
+        activities=ActivitiesAgentOutput(activities=[CandidateActivity(name="Sushi Workshop")]),
+        food=FoodAgentOutput(food=[CandidateFood(name="Ramen House")]),
+        intercity_transport=IntercityTransportAgentOutput(
+            intercity_transport=[CandidateIntercityTransport(name="Bullet Train")]
+        ),
+    )
+    runtime = Runtime(context=sample_context)
+
+    def fake_interrupt(payload):
+        assert {item["type"] for item in payload["selections"]} == {
+            "lodging", "activities", "food", "intercity_transport"
+        }
+        return {
+            "lodging": state.lodging.lodging[0].model_dump(),
+            "activities": [state.activities.activities[0].model_dump()],
+            "food": state.food.food[0].model_dump(),              # single dict -> coverage
+            "intercity_transport": state.intercity_transport.intercity_transport[0].model_dump(),
+            "research_plan": {"lodging_candidates": {"candidates_number": 1}},
+        }
+
+    monkeypatch.setattr("src.core.nodes.interrupt", fake_interrupt)
+
+    node = make_combined_human_review_node()
+    result = await node(state, runtime)
+
+    assert isinstance(result["lodging"], LodgingAgentOutput)
+    assert isinstance(result["activities"], ActivitiesAgentOutput)
+    assert isinstance(result["food"], FoodAgentOutput)
+    assert isinstance(result["intercity_transport"], IntercityTransportAgentOutput)
+    assert isinstance(result["research_plan"], ResearchPlan)
+    assert result["lodging"].lodging[0].name == "Hotel Aurora"
+    assert result["messages"][0].content == "Human review completed"
 
 
 @pytest.mark.asyncio
@@ -189,12 +228,12 @@ async def test_budget_estimate_node_returns_estimate(base_state, sample_context,
     runtime = Runtime(context=sample_context)
     
     # Create the node function
-    budget_estimate_node = planner.make_budget_estimate_node(llm)
+    budget_estimate_node = make_budget_estimate_node(llm)
     result = await budget_estimate_node(base_state, runtime)
 
     assert "estimated_budget" in result
     assert result["messages"][0].name == "budget_estimate"
-    assert llm.calls and llm.calls[0][0] is planner.BudgetEstimate
+    assert llm.calls and llm.calls[0][0] is BudgetEstimate
 
 
 @pytest.mark.asyncio
@@ -203,7 +242,7 @@ async def test_research_plan_node_sets_coordinates(base_state, sample_context, s
     runtime = Runtime(context=sample_context)
 
     # Create the node function
-    research_plan_node = planner.make_research_plan_node(llm)
+    research_plan_node = make_research_plan_node(llm)
     outcome = await research_plan_node(base_state, runtime)
 
     assert outcome["destination_coordinates"] == "35.6895,139.6917"
@@ -217,7 +256,7 @@ async def test_lodging_node_calls_agent(base_state, sample_context, stub_compone
     runtime = Runtime(context=sample_context)
 
     # Create the node function
-    lodging_node = planner.make_lodging_node(agents.lodging)
+    lodging_node = make_lodging_node(agents.lodging)
     result = await lodging_node(base_state, runtime)
 
     assert "lodging" in result
@@ -230,7 +269,7 @@ async def test_activities_node_calls_agent(base_state, sample_context, stub_comp
     runtime = Runtime(context=sample_context)
 
     # Create the node function
-    activities_node = planner.make_activities_node(agents.activities)
+    activities_node = make_activities_node(agents.activities)
     result = await activities_node(base_state, runtime)
 
     assert "activities" in result
@@ -243,7 +282,7 @@ async def test_food_node_calls_agent(base_state, sample_context, stub_components
     runtime = Runtime(context=sample_context)
 
     # Create the node function
-    food_node = planner.make_food_node(agents.food)
+    food_node = make_food_node(agents.food)
     result = await food_node(base_state, runtime)
 
     assert "food" in result
@@ -256,7 +295,7 @@ async def test_intercity_transport_node_calls_agent(base_state, sample_context, 
     runtime = Runtime(context=sample_context)
 
     # Create the node function
-    intercity_node = planner.make_intercity_transport_node(agents.intercity_transport)
+    intercity_node = make_intercity_transport_node(agents.intercity_transport)
     result = await intercity_node(base_state, runtime)
 
     assert "intercity_transport" in result
@@ -269,7 +308,7 @@ async def test_recommendations_node_calls_agent(base_state, sample_context, stub
     runtime = Runtime(context=sample_context)
 
     # Create the node function
-    recommendations_node = planner.make_recommendations_node(agents.recommendations)
+    recommendations_node = make_recommendations_node(agents.recommendations)
     result = await recommendations_node(base_state, runtime)
 
     assert "recommendations" in result
@@ -282,7 +321,7 @@ async def test_planner_node_returns_final_plan(base_state, sample_context, stub_
     runtime = Runtime(context=sample_context)
 
     # Create the node function
-    planner_node = planner.make_planner_node(llm)
+    planner_node = make_planner_node(llm)
     outcome = await planner_node(base_state, runtime)
 
     assert outcome["final_plan"] == llm.responses[FinalPlan]
@@ -295,7 +334,7 @@ async def test_combined_human_review_node_no_options(sample_context):
     runtime = Runtime(context=sample_context)
 
     # Create the node function
-    human_review_node = planner.make_combined_human_review_node()
+    human_review_node = make_combined_human_review_node()
     result = await human_review_node(state, runtime)
 
     assert result == {}
@@ -316,17 +355,17 @@ def test_route_from_human_response_handles_follow_up():
     )
     runtime = Runtime(context=None)
 
-    edges = planner.route_from_human_response(state, runtime)
+    edges = route_from_human_response(state, runtime)
     assert set(edges) == {"research_activities", "research_food"}
 
 
 def test_route_from_human_response_returns_planner():
-    assert planner.route_from_human_response(State(messages=[]), Runtime(context=None)) == "planner"
+    assert route_from_human_response(State(messages=[]), Runtime(context=None)) == "planner"
 
 
 def test_build_research_graph_creates_compiled_graph(stub_components):
     llm, agents = stub_components
-    graph = planner.build_research_graph(llm=llm, agents=agents, human_review="interrupt")
+    graph = build_research_graph(llm=llm, agents=agents, human_review="interrupt")
     assert isinstance(graph, CompiledStateGraph)
 
 
@@ -338,7 +377,7 @@ def test_build_research_graph_creates_compiled_graph(stub_components):
 @pytest.mark.asyncio
 async def test_compiled_graph_auto_mode(sample_context, stub_components):
     llm, agents = stub_components
-    graph = planner.build_research_graph(llm=llm, agents=agents, human_review="auto")
+    graph = build_research_graph(llm=llm, agents=agents, human_review="auto")
 
     result_state = await graph.ainvoke(
         State(messages=[]),
@@ -360,7 +399,7 @@ async def test_compiled_graph_auto_mode(sample_context, stub_components):
 @pytest.mark.asyncio
 async def test_compiled_graph_interrupt_resume(sample_context, stub_components):
     llm, agents = stub_components
-    graph = planner.build_research_graph(llm=llm, agents=agents, human_review="interrupt")
+    graph = build_research_graph(llm=llm, agents=agents, human_review="interrupt")
 
     first_pass = await graph.ainvoke(
         State(messages=[]),
@@ -381,4 +420,9 @@ async def test_compiled_graph_interrupt_resume(sample_context, stub_components):
 
     assert resumed["final_plan"] == llm.responses[FinalPlan]
     assert resumed["lodging"]["lodging"][0]["name"] == "Hotel Aurora"
-    assert resumed["intercity_transport"]["transport"][0]["name"] == "Bullet Train"
+    assert resumed["intercity_transport"]["intercity_transport"][0]["name"] == "Bullet Train"
+    assert isinstance(resumed["lodging"], LodgingAgentOutput)
+    assert resumed["lodging"].lodging[0].name == "Hotel Aurora"
+    assert isinstance(resumed["intercity_transport"], IntercityTransportAgentOutput)
+    assert resumed["intercity_transport"].intercity_transport[0].name == "Bullet Train"
+

@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api import app as api_app
-from src.core.domain import (
+from src.core.schemas import (
     ActivitiesAgentOutput,
     BudgetEstimate,
     CandidateActivity,
@@ -158,7 +158,7 @@ class StubBundle:
             "activities": ActivitiesAgentOutput(activities=[_make_activity_candidate()]),
             "food": FoodAgentOutput(food=[_make_food_candidate()]),
             "intercity_transport": IntercityTransportAgentOutput(
-                transport=[_make_transport_candidate()]
+                intercity_transport=[_make_transport_candidate()]
             ),
         }
         return config, result

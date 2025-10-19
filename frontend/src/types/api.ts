@@ -19,13 +19,11 @@ export interface Context {
   date_to: string; // ISO date string
   group_type: 'family' | 'couple' | 'alone' | 'friends' | 'business';
   trip_purpose?: string;
-  current_location?: string;
+  current_location: string;
   notes?: string;
 }
 
-export interface PlanRequest {
-  context: Context;
-}
+export type PlanRequest = Context;
 
 export interface CandidateBase {
   id?: string;
@@ -107,7 +105,6 @@ export interface ResearchPlan {
   activities_candidates?: CandidateResearch;
   food_candidates?: CandidateResearch;
   intercity_transport_candidates?: CandidateResearch;
-  local_transport_candidates?: CandidateResearch;
 }
 
 export interface RecommendationsOutput {
@@ -176,23 +173,12 @@ export interface ResumeSelections {
 
 export interface ResumeRequest {
   config?: Record<string, any>;
-  selections: ResumeSelections;
-  research_plan?: Record<string, CandidateResearch>;
+  selections?: ResumeSelections;
+  research_plan?: ResearchPlan;
 }
 
 // Form types for the frontend
-export interface TripFormData {
-  destination: string;
-  destination_country: string;
-  date_from: string;
-  date_to: string;
-  budget: number;
-  currency: string;
-  group_type: 'family' | 'couple' | 'alone' | 'friends' | 'business';
-  trip_purpose?: string;
-  current_location?: string;
-  travellers: Traveller[];
-}
+export type TripFormData = Context;
 
 export interface PlanningState {
   status: 'idle' | 'loading' | 'success' | 'error';

@@ -195,10 +195,13 @@ const TripForm: React.FC<TripFormProps> = ({ onSubmit, isLoading = false }) => {
             <div>
               <label className="form-label">Current Location</label>
               <input
-                {...register('current_location')}
+                {...register('current_location', { required: 'Current location is required' })}
                 className="form-input"
                 placeholder="e.g., New York"
               />
+              {errors.current_location && (
+                <p className="mt-1 text-sm text-red-600">{errors.current_location.message}</p>
+              )}
             </div>
           </div>
 

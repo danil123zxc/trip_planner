@@ -7,22 +7,18 @@ from src.services import (
     create_internet_tool,
     create_reddit_tool,
 )
-from src.workflows.planner import build_research_agents, build_research_graph
-from src.core.domain import ResearchPlan
+
 from src.api.schemas import ResumeSelections
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.types import Command
 from langgraph.checkpoint.memory import InMemorySaver
 from typing import Dict, Any, List, Optional, Tuple, Mapping
+from datetime import datetime, timedelta
 import os
 from uuid import uuid4
 from src.pipelines.rag import RetrievalConfig, RetrievalPipeline, create_default_pipeline
-from src.core.domain import (
-    CandidateResearch,
-    Context,
-    State,
-    
-)
+from src.core.builders import build_research_agents, build_research_graph
+from src.core.schemas import ResearchPlan, Context, State
 from langchain_xai import ChatXAI
 
 
@@ -123,6 +119,7 @@ class WorkflowBundle:
         self._configs: Dict[str, Dict[str, Any]] = {}
         self._pending_states: Dict[str, Mapping[str, Any]] = {}
         self._pending_interrupts: Dict[str, Dict[str, Any]] = {}
+        self._thread_timestamps: Dict[str, datetime] = {}
 
     def __repr__(self) -> str:
     
@@ -149,6 +146,25 @@ class WorkflowBundle:
             f"  pending_interrupts={len(self._pending_interrupts)}\n"
             f")"
         )
+
+    def cleanup_old_threads(self, max_age_minutes: int = 60) -> str:
+        """Remove threads older than max_age_minutes.
+        
+        Returns:
+            String indicating number of threads cleaned up
+        """
+        now = datetime.now()
+        cutoff = now - timedelta(minutes=max_age_minutes)
+        old_threads = [
+            tid for tid, ts in self._thread_timestamps.items()
+            if ts < cutoff
+        ]
+        
+        for thread_id in old_threads:
+            self.cleanup_thread(thread_id)
+            self._thread_timestamps.pop(thread_id, None)
+        
+        return f"Cleaned up {len(old_threads)} threads"
 
     def _build_retrieval_pipeline(self) -> RetrievalPipeline:
         """Build the RAG pipeline for document retrieval and reranking.
@@ -188,83 +204,6 @@ class WorkflowBundle:
                 self._pending_interrupts[thread_id] = dict(payload)
         else:
             self._pending_interrupts.pop(thread_id, None)
-
-    def _build_resume_payload(
-        self,
-        *,
-        thread_id: str,
-        selections: ResumeSelections,
-        research_plan: Optional[Dict[str, CandidateResearch]],
-    ) -> Dict[str, Any]:
-        state = self._pending_states.get(thread_id)
-        payload: Dict[str, Any] = {}
-        if state is None:
-            # No pending state - this is a fresh start with selections/research_plan
-            # Return an empty payload that represents starting with the given parameters
-
-            if research_plan:
-                payload["research_plan"] = research_plan.model_dump(exclude_none=True)
-            
-            # For fresh starts, we don't need to resolve existing options
-            # Just return the research plan if provided
-            return payload
-
-        if research_plan:
-            payload["research_plan"] = research_plan.model_dump(exclude_none=True)
-
-        def resolve_options(key: str) -> List[Any]: 
-            """Extract candidate options from stored agent output."""
-            output = state.get(key)
-            if output is None:
-                return []
-            
-            # Extract the list field from the agent output
-            # e.g., LodgingAgentOutput has a .lodging field
-            if hasattr(output, key):
-                return getattr(output, key) or []
-            
-            return []
-
-
-        single_map = {
-            "lodging": selections.lodging, 
-            "intercity_transport": selections.intercity_transport
-        }
-
-        for key, index in single_map.items():
-            if index is None:
-                continue
-            options = resolve_options(key)
-            if not options:
-                raise RuntimeError(f"No options stored for '{key}' to select from.")
-            if index < 0 or index >= len(options):
-                raise RuntimeError(f"Selection index {index} is out of range for '{key}'.")
-            # Convert selected option to dictionary for LangGraph processing
-            payload[key] = options[index].model_dump(exclude_none=True)
-
-        # Process multi-selections (activities, food) - user can pick multiple options
-        multi_map = {
-            "activities": selections.activities,
-            "food":selections.food,
-        }
-  
-        for key, indices in multi_map.items():
-            if indices is None:
-                continue
-            options = resolve_options(key)
-            if not options:
-                raise RuntimeError(f"No options stored for '{key}' to select from.")
-            selected = []
-            if indices:
-                for idx in indices:
-                    if idx < 0 or idx >= len(options):
-                        raise RuntimeError(f"Selection index {idx} is out of range for '{key}'.")
-                    selected.append(options[idx])
-      
-            dumps = [item.model_dump(exclude_none=True) for item in selected]
-            payload[key] = dumps
-
-        return payload
 
     async def close(self) -> None:
         await self.trip_client.aclose()
@@ -314,77 +253,6 @@ class WorkflowBundle:
         self._store_result(active_thread, result)
         return config, result
 
-    async def resume_trip(
-        self,
-        *,
-        context: Optional[Context]=None,
-        config: Dict[str, Any],
-        selections: ResumeSelections,
-        research_plan: Optional[Dict[str, CandidateResearch]],
-    ) -> Tuple[Dict[str, Any], Mapping[str, Any]]:
-        """Resume a previously interrupted trip planning workflow.
-        
-        This method continues the planning process from where it was interrupted,
-        incorporating user selections and optionally updating the research plan.
-        It supports both resuming existing threads and starting fresh with selections.
-        
-        Args:
-            context: Trip planning context (used for new threads when config is None)
-            config: LangGraph configuration from previous interrupt (None for fresh start)
-            selections: User choices for lodging, activities, food, and transport
-            research_plan: Optional overrides for research parameters
-            
-        Returns:
-            Tuple containing:
-            - config: Updated LangGraph configuration with thread ID
-            - result: Workflow execution results after resume
-            
-        Raises:
-            RuntimeError: If thread_id is invalid or workflow execution fails
-            
-        Note:
-            - If config is None, creates a new thread and stores context
-            - Thread state is restored from _pending_states for existing threads
-            - Selections are applied to filter candidate options
-        """
-      
-        configurable = config.get("configurable", {})
-        thread_id = configurable.get("thread_id")
-
-        if not thread_id:
-            raise RuntimeError("Resume config must include configurable.thread_id.")
-
-        if thread_id not in self._contexts:
-            raise RuntimeError(f"Unknown planning thread '{thread_id}'.")
-
-        stored_context = self._contexts[thread_id]
-        execution_context = context or stored_context
-
-        if execution_context is None:
-            raise RuntimeError(f"No planning context available for thread '{thread_id}'.")
-
-        if context is not None:
-            self._contexts[thread_id] = context
-
-        active_config = config or self._make_config(thread_id)
-        self._configs[thread_id] = active_config
-
-        resume_payload = self._build_resume_payload(
-            thread_id=thread_id,
-            selections=selections,
-            research_plan=research_plan,
-        )
-
-        command = Command(resume=resume_payload)
-        result = await self.graph.ainvoke(
-            command,
-            context=execution_context,
-            config=active_config,
-        )
-        self._store_result(thread_id, result)
-
-        return active_config, result
-
     async def final_plan(
         self,
         *,
@@ -403,7 +271,12 @@ class WorkflowBundle:
         stored_context = self._contexts[active_thread]
         
         result = await self.graph.ainvoke(
-            Command(resume={"selections": selections.model_dump(exclude_none=True)}),
+            Command(resume={
+                "lodging": selections.lodging, 
+                "activities": selections.activities, 
+                "food": selections.food, 
+                "intercity_transport": selections.intercity_transport
+            }),
             context=stored_context,
             config=config,
         )

@@ -11,17 +11,19 @@ Key model categories:
 - *AgentOutput: Structured outputs from specialized research agents
 - FinalPlan: Complete day-by-day itinerary with all selections
 - State: LangGraph workflow state management
-- Context: Trip planning parameters and traveler information
+- Context: Trip planning parameters and traveller information
 """
 from __future__ import annotations
 
 from datetime import date
+from dataclasses import dataclass
 from typing import Annotated, Dict, List, Literal, Optional
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from src.core.reducer import reducer
 from src.core.types import (
     HttpURLStr,
     ISO4217,
@@ -31,6 +33,7 @@ from src.core.types import (
     Rating,
     TimeHHMM,
 )
+from langchain.agents import AgentExecutor
 
 
 class BudgetEstimate(BaseModel):
@@ -101,8 +104,7 @@ class ResearchPlan(BaseModel):
     activities_candidates: Optional[CandidateResearch] = None
     food_candidates: Optional[CandidateResearch] = None
     intercity_transport_candidates: Optional[CandidateResearch] = None
-    local_transport_candidates: Optional[CandidateResearch] = None
-
+ 
     model_config = ConfigDict(extra="forbid")
 
 
@@ -215,7 +217,7 @@ class CandidateIntercityTransport(BaseModel):
 
 class IntercityTransportAgentOutput(BaseModel):
     """Agent payload bundling the researched intercity transport options."""
-    transport: List[CandidateIntercityTransport]
+    intercity_transport: List[CandidateIntercityTransport]
 
     model_config = ConfigDict(extra="forbid")
 
@@ -232,7 +234,7 @@ class IntracityHop(BaseModel):
 
 class RecommendationsOutput(BaseModel):
     """Holistic travel advice spanning safety, cultural, and logistical tips."""
-    safety_level: Literal["very_safe", "safe", "moderate", "risky", "dangerous"]
+    safety_level: Optional[Literal["very_safe", "safe", "moderate", "risky", "dangerous"]] = None
     safety_notes: Optional[List[str]] = Field(default_factory=list)
     travel_advisories: Optional[List[str]] = Field(default_factory=list)
     visa_requirements: Optional[Dict[str, str]] = Field(default_factory=dict)
@@ -240,7 +242,7 @@ class RecommendationsOutput(BaseModel):
     dress_code_recommendations: Optional[List[str]] = Field(default_factory=list)
     local_customs: Optional[List[str]] = Field(default_factory=list)
     language_barriers: Optional[List[str]] = Field(default_factory=list)
-    child_friendly_rating: int = Field(ge=1, le=5)
+    child_friendly_rating: Optional[int] = Field(default=None, ge=1, le=5)
     infant_considerations: Optional[List[str]] = Field(default_factory=list)
     elderly_accessibility: Optional[List[str]] = Field(default_factory=list)
     weather_conditions: Optional[str] = None
@@ -266,27 +268,13 @@ class PlanForDay(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-
 class FinalPlan(BaseModel):
     """Completed itinerary or a follow-up research request from the planner."""
     days: Optional[List[PlanForDay]] = None
     total_budget: Optional[NonNegMoney] = None
-    lodging: Optional[CandidateLodging] = None
-    intercity_transport: Optional[CandidateIntercityTransport] = None
-    currency: Optional[ISO4217] = None
-    research_plan: Optional[ResearchPlan] = None
-
-    model_config = ConfigDict(extra="forbid")
 
 
-class OutputSchema(BaseModel):
-    """Legacy schema kept for backwards compatibility with earlier outputs."""
-    days: List[PlanForDay]
-    total_budget: NonNegMoney
-    currency: Optional[ISO4217] = Field(default="USD")
-
-    model_config = ConfigDict(extra="forbid")
-
+    model_config = ConfigDict(extra="allow")
 
 class State(BaseModel):
     """LangGraph workflow state that flows between nodes during execution.
@@ -318,10 +306,11 @@ class State(BaseModel):
     destination_coordinates: Optional[str] = None
     estimated_budget: Optional[BudgetEstimate] = None
     research_plan: Optional[ResearchPlan] = None
-    lodging: Optional[LodgingAgentOutput] = None
-    activities: Optional[ActivitiesAgentOutput] = None
-    food: Optional[FoodAgentOutput] = None
-    intercity_transport: Optional[IntercityTransportAgentOutput] = None
+    lodging: Annotated[Optional[LodgingAgentOutput], reducer] = None
+    activities: Annotated[Optional[ActivitiesAgentOutput], reducer] = None
+    food: Annotated[Optional[FoodAgentOutput], reducer] = None
+    intercity_transport: Annotated[Optional[IntercityTransportAgentOutput], reducer] = None
+    
     recommendations: Optional[RecommendationsOutput] = None
     final_plan: Optional[FinalPlan] = None
 
@@ -358,13 +347,13 @@ class Context(BaseModel):
     travellers: List[Traveller] = Field(default_factory=list)
     budget: NonNegMoney = Field(default=1000)
     currency: ISO4217 = Field(default="USD")
+    current_location: str
     destination: str
     destination_country: str
     date_from: date
     date_to: date
     group_type: Literal["family", "couple", "alone", "friends", "business"]
     trip_purpose: Optional[str] = None
-    current_location: Optional[str] = None
     notes: Optional[str] = None
 
     model_config = ConfigDict(extra="forbid")
@@ -394,3 +383,39 @@ class Context(BaseModel):
     @property
     def infant_num(self) -> int:
         return sum(1 for traveller in self.travellers if traveller.age_group == "infant")
+
+
+@dataclass(slots=True)
+class ResearchAgents:
+    """Container for the task-specific research agents."""
+
+    lodging: AgentExecutor
+    activities: AgentExecutor
+    food: AgentExecutor
+    intercity_transport: AgentExecutor
+    recommendations: AgentExecutor
+
+
+__all__ = [
+    "BudgetEstimate",
+    "CandidateResearch",
+    "ResearchPlan",
+    "CandidateBase",
+    "CandidateLodging",
+    "LodgingAgentOutput",
+    "CandidateActivity",
+    "ActivitiesAgentOutput",
+    "CandidateFood",
+    "FoodAgentOutput",
+    "Transfer",
+    "CandidateIntercityTransport",
+    "IntercityTransportAgentOutput",
+    "IntracityHop",
+    "RecommendationsOutput",
+    "PlanForDay",
+    "FinalPlan",
+    "State",
+    "Traveller",
+    "Context",
+    "ResearchAgents",
+]

@@ -18,8 +18,9 @@ from src.services.trip_advisor import (
 )
 
 
+@pytest.mark.asyncio
 @patch('src.services.geocoding.requests.get')
-def test_get_coordinates_nominatim_success(mock_get):
+async def test_get_coordinates_nominatim_success(mock_get):
     """Test successful geocoding request."""
     # Mock successful response
     mock_response = Mock()
@@ -33,13 +34,14 @@ def test_get_coordinates_nominatim_success(mock_get):
     mock_response.raise_for_status.return_value = None
     mock_get.return_value = mock_response
 
-    result = get_coordinates_nominatim("Tokyo, Japan")
+    result = await get_coordinates_nominatim("Tokyo, Japan")
     assert result == "35.6895,139.6917"
     mock_get.assert_called_once()
 
 
+@pytest.mark.asyncio
 @patch('src.services.geocoding.requests.get')
-def test_get_coordinates_nominatim_no_results(mock_get):
+async def test_get_coordinates_nominatim_no_results(mock_get):
     """Test geocoding with no results."""
     # Mock empty response
     mock_response = Mock()
@@ -47,22 +49,24 @@ def test_get_coordinates_nominatim_no_results(mock_get):
     mock_response.raise_for_status.return_value = None
     mock_get.return_value = mock_response
 
-    result = get_coordinates_nominatim("Nonexistent Place")
+    result = await get_coordinates_nominatim("Nonexistent Place")
     assert result is None
 
 
+@pytest.mark.asyncio
 @patch('src.services.geocoding.requests.get')
-def test_get_coordinates_nominatim_api_error(mock_get):
+async def test_get_coordinates_nominatim_api_error(mock_get):
     """Test geocoding with API error."""
     # Mock API error
     mock_get.side_effect = Exception("API Error")
 
-    result = get_coordinates_nominatim("Tokyo, Japan")
+    result = await get_coordinates_nominatim("Tokyo, Japan")
     assert result is None
 
 
+@pytest.mark.asyncio
 @patch('src.services.geocoding.requests.get')
-def test_get_coordinates_nominatim_invalid_input(mock_get):
+async def test_get_coordinates_nominatim_invalid_input(mock_get):
     """Test geocoding with invalid input."""
     # Mock empty response for empty string
     mock_response = Mock()
@@ -70,12 +74,12 @@ def test_get_coordinates_nominatim_invalid_input(mock_get):
     mock_response.raise_for_status.return_value = None
     mock_get.return_value = mock_response
 
-    result = get_coordinates_nominatim("")
+    result = await get_coordinates_nominatim("")
     assert result is None
     
     # Mock error for None input
     mock_get.side_effect = Exception("Invalid input")
-    result = get_coordinates_nominatim(None)
+    result = await get_coordinates_nominatim(None)
     assert result is None
 
 

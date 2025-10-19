@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useTripPlanning } from './hooks/useTripPlanning';
 import { useApiHealth } from './hooks/useApiHealth';
 import TripForm from './components/TripForm';
@@ -6,7 +6,7 @@ import PlanningResults from './components/PlanningResults';
 import SelectionInterface from './components/SelectionInterface';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorMessage from './components/ErrorMessage';
-import { TripFormData, ResumeSelections } from './types/api';
+import { TripFormData, ResumeSelections, ResearchPlan } from './types/api';
 
 function App() {
   const { state, startPlanning, resumePlanning, reset } = useTripPlanning();
@@ -15,12 +15,34 @@ function App() {
 
   const handleFormSubmit = async (formData: TripFormData) => {
     try {
-      const response = await startPlanning({ context: formData });
+      const response = await startPlanning(formData);
       if (response.config) {
         setCurrentConfig(response.config);
       }
     } catch (error) {
       console.error('Failed to start planning:', error);
+    }
+  };
+
+  const handleExtraResearch = async (overrides: ResearchPlan) => {
+    if (!currentConfig) return;
+
+    const latestPlan = overrides;
+    if (!latestPlan || Object.keys(latestPlan).length === 0) {
+      console.warn('Extra research ignored: received empty research plan.');
+      return;
+    }
+
+    try {
+      const response = await resumePlanning({
+        config: currentConfig,
+        research_plan: latestPlan,
+      });
+      if (response.config) {
+        setCurrentConfig(response.config);
+      }
+    } catch (error) {
+      console.error('Failed to perform extra research:', error);
     }
   };
 
@@ -31,7 +53,6 @@ function App() {
       const response = await resumePlanning({
         config: currentConfig,
         selections,
-        research_plan: undefined
       });
       if (response.config) {
         setCurrentConfig(response.config);
@@ -124,10 +145,14 @@ function App() {
                 response={state.data}
                 onConfirm={handleSelectionConfirm}
                 onCancel={handleStartOver}
+                onExtraResearch={handleExtraResearch}
                 isLoading={false}
               />
             ) : (
-              <PlanningResults response={state.data} />
+              <PlanningResults 
+                response={state.data}
+                onExtraResearch={handleExtraResearch}
+              />
             )}
           </>
         )}
@@ -146,4 +171,5 @@ function App() {
 }
 
 export default App;
+
 

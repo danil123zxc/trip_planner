@@ -161,7 +161,7 @@ class LocationPhotos(BaseModel):
     offset: Optional[int] = None
     source: Optional[str] = Field(
         default=None,
-        description="Comma separated photo source filter (Expert, Management, Traveler)",
+        description="Comma separated photo source filter (Expert, Management, traveller)",
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -224,20 +224,20 @@ class ReviewOutput(BaseModel):
 
 class ComprehensiveLocationInput(BaseModel):
     """Composite request used by the helper that fans out for details."""
-    searchQuery: str
-    latLong: Optional[str] = None
-    category: Optional[Literal["attractions", "restaurants", "geos", "hotels"]] = None
-    phone: Optional[str] = None
-    address: Optional[str] = None
-    radius: Optional[int] = Field(default=None, ge=0)
-    radiusUnit: Optional[Literal["km", "mi", "m"]] = None
-    language: Optional[LanguageCode] = Field(default="en")
-    limit_locations: Optional[int] = Field(default=5)
-    photos_limit: Optional[int] = Field(default=10)
-    reviews_limit: Optional[int] = Field(default=10)
-    currency: Optional[ISO4217] = Field(default="USD")
-    offset_photos: Optional[int] = None
-    offset_reviews: Optional[int] = None
+    searchQuery: str = Field(description="Text to use for searching based on the name of the location")
+    latLong: Optional[str] = Field(default=None, description="Latitude/Longitude pair (e.g., '42.3455,-71.10767')")
+    category: Optional[Literal["attractions", "restaurants", "geos", "hotels"]] = Field(default=None, description="Filter by property type")
+    phone: Optional[str] = Field(default=None, description="Phone number filter")
+    address: Optional[str] = Field(default=None, description="Address filter")
+    radius: Optional[int] = Field(default=None, ge=0, description="Radius length")
+    radiusUnit: Optional[Literal["km", "mi", "m"]] = Field(default=None, description="Unit for the radius")
+    language: Optional[LanguageCode] = Field(default="en", description="Language code")
+    limit_locations: Optional[int] = Field(default=5, description="Max locations to process")
+    photos_limit: Optional[int] = Field(default=10, description="Max photos to process")
+    reviews_limit: Optional[int] = Field(default=10, description="Max reviews to process")
+    currency: Optional[ISO4217] = Field(default="USD", description="Currency code")
+    offset_photos: Optional[int] = Field(default=None, description="Index of the first photo")
+    offset_reviews: Optional[int] = Field(default=None, description="Index of the first review")
 
 
 class ComprehensiveLocationResult(BaseModel):

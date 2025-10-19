@@ -2,6 +2,50 @@ import { useState, useCallback } from 'react';
 import { tripPlanningApi } from '../services/api';
 import { PlanRequest, ResumeRequest, PlanningState } from '../types/api';
 
+const formatErrorMessage = (error: any, fallback: string) => {
+  if (error?.code === 'ECONNABORTED' || /timeout/i.test(error?.message ?? '')) {
+    return 'The planning request is taking longer than expected. Please wait a bit and try again, or refresh once the backend finishes.';
+  }
+
+  const detail = error?.response?.data?.detail;
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((entry: any) => {
+        if (!entry) {
+          return null;
+        }
+
+        if (typeof entry === 'string') {
+          return entry;
+        }
+
+        if (entry.msg) {
+          const location = Array.isArray(entry.loc) ? entry.loc.join('.') : entry.loc;
+          return location ? `${location}: ${entry.msg}` : entry.msg;
+        }
+
+        return typeof entry === 'object' ? JSON.stringify(entry) : String(entry);
+      })
+      .filter(Boolean)
+      .join('; ');
+  }
+
+  if (detail && typeof detail === 'object') {
+    if ('message' in detail && typeof detail.message === 'string') {
+      return detail.message;
+    }
+
+    return JSON.stringify(detail);
+  }
+
+  if (typeof detail === 'string') {
+    return detail;
+  }
+
+  return error?.message || fallback;
+};
+
 export const useTripPlanning = () => {
   const [state, setState] = useState<PlanningState>({
     status: 'idle',
@@ -15,7 +59,7 @@ export const useTripPlanning = () => {
       setState({ status: 'success', data: response });
       return response;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to start planning';
+      const errorMessage = formatErrorMessage(error, 'Failed to start planning');
       setState({ status: 'error', error: errorMessage });
       throw error;
     }
@@ -29,7 +73,7 @@ export const useTripPlanning = () => {
       setState({ status: 'success', data: response });
       return response;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to resume planning';
+      const errorMessage = formatErrorMessage(error, 'Failed to resume planning');
       setState({ status: 'error', error: errorMessage });
       throw error;
     }
@@ -46,4 +90,3 @@ export const useTripPlanning = () => {
     reset,
   };
 };
-
