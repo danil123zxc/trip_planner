@@ -13,6 +13,10 @@ Trip Planner is an agentic travel-planning platform that orchestrates a LangGrap
 - Combines external services (TripAdvisor, Amadeus, Tavily Search, Reddit, geocoding) with a retrieval-augmented generation (RAG) pipeline for up-to-date travel intelligence.
 - Exposes the planning workflow through a FastAPI service and a React/TypeScript frontend for interactive trip creation.
 
+## Arhitecture and design 
+
+[`Architecture and design`](docs/README.md)
+
 ## Examples
 
 [`examples.md`](./examples.md)
