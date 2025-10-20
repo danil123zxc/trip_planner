@@ -4,6 +4,8 @@
 
 Trip Planner is an agentic travel-planning platform that orchestrates a LangGraph workflow to research, price, and assemble day-by-day itineraries. The project originates in the explorative `trip_planner.ipynb` notebook and promotes a notebook-first workflow where production modules mirror the canonical notebook implementation.
 
+![Diagram](trip_planner_diagram.png)
+
 ## What the Project Does
 
 - Coordinates specialised agents (budget, research planning, lodging, activities, food, transport, and final planner) through a LangGraph `StateGraph`.
@@ -11,15 +13,19 @@ Trip Planner is an agentic travel-planning platform that orchestrates a LangGrap
 - Combines external services (TripAdvisor, Amadeus, Tavily Search, Reddit, geocoding) with a retrieval-augmented generation (RAG) pipeline for up-to-date travel intelligence.
 - Exposes the planning workflow through a FastAPI service and a React/TypeScript frontend for interactive trip creation.
 
-[[examples.md]]
+## Arhitecture and design 
+
+[`Architecture and design`](docs/README.md)
+
+## Examples
+
+[`examples.md`](./examples.md)
 
 ### Workflow Highlights
 
 - **Notebook as source of truth:** All behaviour is first implemented and validated in `trip_planner.ipynb` before extraction into modules under `src/`.
 - **Structured state management:** Shared `State` and `Context` models (see `src/core/domain.py`) keep agent outputs and user context aligned.
 - **Human decision points:** Interrupt nodes request user selections for lodging, dining, activities, and transport options before the planner agent finalises the itinerary.
-
-`trip_planner_diagram.png`
 
 ## Why the Project Is Useful
 
