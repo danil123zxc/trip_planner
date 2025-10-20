@@ -101,6 +101,5 @@ def _result_to_response(
         intercity_transport=transport_list,
         recommendations=result.get("recommendations"),
         final_plan=result.get("final_plan"),
-        interrupt=interrupt_payload,
-        messages=_messages_to_strings(result),
+        interrupt=interrupt_payload
     )

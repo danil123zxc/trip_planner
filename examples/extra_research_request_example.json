@@ -1,0 +1,30 @@
+{
+    "config": {
+      "recursion_limit": 100,
+      "configurable": {
+        "thread_id": "trip_d1db3792-238d-46ba-b9e4-fb8a45a158cc"
+      }
+    },
+    "research_plan": {
+      "lodging_candidates": {
+        "name": "lodging",
+        "description": "cheap options for solo traveler",
+        "candidates_number": 1
+      },
+      "activities_candidates": {
+        "name": "activities",
+        "description": "cheap options",
+        "candidates_number": 1
+      },
+      "food_candidates": {
+        "name": "restraunts and cafes",
+        "description": "traditional places",
+        "candidates_number": 1
+      },
+      "intercity_transport_candidates": {
+        "name": "flights",
+        "description": "cheap tickets",
+        "candidates_number": 1
+      }
+    }
+  }
