@@ -1,0 +1,928 @@
+
+{
+    "status": "interrupt",
+    "config": {
+      "recursion_limit": 100,
+      "configurable": {
+        "thread_id": "trip_d1db3792-238d-46ba-b9e4-fb8a45a158cc"
+      }
+    },
+    "estimated_budget": {
+      "budget_level": "$$$",
+      "currency": "USD",
+      "intercity_transport": 300,
+      "local_transport": 50,
+      "food": 200,
+      "activities": 150,
+      "lodging": 200,
+      "other": 100,
+      "budget_per_day": 333.33,
+      "notes": "Budget breakdown for solo adult traveler (Danil, Korean nationality, sports interests) from Seoul to Tokyo, Japan, for 3 days (October 21-23, 2025; 2 nights lodging). Total budget capped at $1000 USD, fitting an upscale ($$$) level with ~$333/day. Intercity transport: Round-trip economy flight Seoul-Tokyo (~2-3 hour flight, $300 USD, off-peak autumn pricing for solo). Local transport: 3-day Tokyo Metro pass or IC card usage (~$15-20/day for solo subway/bus rides in a compact city). Food: Mix of budget convenience store meals, ramen shops, and one nicer izakaya per day (~$65/day, adjusted for solo traveler's lower sharing costs but Japan's higher food prices). Activities: Sports-focused (e.g., visit Jingu Baseball Stadium, sports museum, or autumn hiking; includes entry fees/tours ~$50/day, leveraging free parks/walking). Lodging: Mid-range solo hotel or capsule/Airbnb in central Tokyo (~$100/night for 2 nights, no sharing premium). Other: Souvenirs, tips, SIM card/data, minor incidentals (~$33/day; no visa needed for Korean national short stay). Assumes efficient solo travel patterns, current exchange rates (1 USD ~150 JPY), and seasonal mild weather without major events inflating costs. All categories sum to exactly $1000 USD.",
+      "total": 1000
+    },
+    "research_plan": {
+      "lodging_candidates": {
+        "name": "Upscale Solo Traveler Accommodations in Tokyo",
+        "description": "Luxury hotels and boutique properties in safe, central locations like Shibuya or Shinjuku, prioritizing security features, social lounges or bars for solo travelers, amenities like high-speed Wi-Fi and concierge services, within 200 USD budget for 3 nights, focusing on comfort and convenience for a short upscale stay",
+        "candidates_number": 4
+      },
+      "activities_candidates": {
+        "name": "Premium Social and Cultural Experiences in Tokyo",
+        "description": "High-end activities suitable for solo travelers, including private guided tours of temples and gardens, premium cultural workshops like tea ceremonies, social events such as upscale izakaya nights or observation deck visits, seasonal autumn highlights, within 150 USD budget, emphasizing self-discovery and social interaction opportunities for a 3-day upscale trip",
+        "candidates_number": 4
+      },
+      "food_candidates": {
+        "name": "Upscale Social Dining Options in Tokyo",
+        "description": "Fine dining restaurants and unique culinary experiences featuring Japanese specialties like kaiseki or sushi omakase, with counter seating or communal tables for solo diners to socialize, including some Michelin-recommended spots, within 200 USD budget for 3 days, focusing on high-quality, atmospheric venues that welcome individuals",
+        "candidates_number": 3
+      },
+      "intercity_transport_candidates": {
+        "name": "Premium Transport to Tokyo",
+        "description": "Upscale intercity options such as business class international flights or first-class Shinkansen tickets, prioritizing comfort, direct routes, and convenience for a solo traveler, within 300 USD budget, considering travel time efficiency for a short 3-day trip",
+        "candidates_number": 3
+      }
+    },
+    "lodging": [
+      {
+        "id": "1083444",
+        "name": "Sakura Hotel Hatagaya",
+        "address": "1-32-3 Hatagaya, Shibuya 151-0072 Tokyo Prefecture",
+        "price_level": "$$",
+        "rating": 3.9,
+        "reviews": [
+          "The staff were all really friendly and helpful. The restaurant / bar has an eclectic selection of international dishes and beers.",
+          "This hotel was in a SUPER cute residential area. It is also literally a 2-minute walk from the nearest metro station."
+        ],
+        "photos": [
+          "https://media-cdn.tripadvisor.com/media/photo-m/1280/19/a8/45/b4/sakura-hotel-hatagaya.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/11/3b/3f/5d/sakura-hotel-hatagatya.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/11/3b/3e/ff/sakura-cafe.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Hotel_Review-g1066456-d1083444-Reviews-Sakura_Hotel_Hatagaya-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+        "lat": 35.676163,
+        "lon": 139.6767,
+        "evidence_score": 0.9,
+        "source_id": "tripadvisor",
+        "notes": "Muslim-friendly with prayer room and cafe/bar for social interactions, ideal for solo travelers; high-speed Wi-Fi available; safe residential area near transport.",
+        "area": "Hatagaya, Shibuya",
+        "price_night": 85,
+        "cancel_policy": "Free cancellation up to 24 hours before check-in"
+      },
+      {
+        "id": "13917393",
+        "name": "Himalaya Cloud Hotel",
+        "address": "2-30-2 Hatagaya, Shibuya 151-0072 Tokyo Prefecture",
+        "price_level": "$$",
+        "rating": 4.7,
+        "reviews": [
+          "My adult daughter and I are staying here for four nights while in Tokyo. The room is spacious and perfectly clean.",
+          "The room is 27 sq.m big. I love it so much. Stuff was nice and friendly."
+        ],
+        "photos": [
+          "https://media-cdn.tripadvisor.com/media/photo-o/2a/c8/39/f2/caption.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/13/a9/48/62/caption.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-w/2a/c8/3a/33/caption.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Hotel_Review-g1066456-d13917393-Reviews-Himalaya_Cloud_Hotel-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+        "lat": 35.675926,
+        "lon": 139.67143,
+        "evidence_score": 0.95,
+        "source_id": "tripadvisor",
+        "notes": "Boutique hotel with rooftop garden for relaxation and social lounging; spacious rooms for solo comfort; secure location near Shinjuku; concierge services available.",
+        "area": "Hatagaya, Shibuya",
+        "price_night": 90,
+        "cancel_policy": "Free cancellation up to 24 hours before check-in"
+      },
+      {
+        "id": "1083446",
+        "name": "SHIBUYA HOTEL EN",
+        "address": "1-1 Maruyamacho, Shibuya 150-0044 Tokyo Prefecture",
+        "price_level": "$$$",
+        "rating": 4,
+        "reviews": [
+          "Fantastic location, so close to everything. 5 minute walk to Shibuya station.",
+          "The hotel structure itself is fine. Great location in Shibuya - one can walk to everything."
+        ],
+        "photos": [
+          "https://media-cdn.tripadvisor.com/media/photo-o/0b/42/56/63/oriental-room--v11975194.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/0e/6c/1e/77/caption.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/0e/6c/1e/c5/shibuya-hotel-en.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Hotel_Review-g1066456-d1083446-Reviews-SHIBUYA_HOTEL_EN-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+        "lat": 35.659836,
+        "lon": 139.6954,
+        "evidence_score": 0.88,
+        "source_id": "tripadvisor",
+        "notes": "Upscale boutique with 24-hour security and concierge; social areas and bars nearby; high-speed Wi-Fi; central safe location perfect for solo upscale stay.",
+        "area": "Maruyamacho, Shibuya",
+        "price_night": 95,
+        "cancel_policy": "Free cancellation up to 24 hours before check-in"
+      },
+      {
+        "id": "320581",
+        "name": "Hotel Sunroute Plaza Shinjuku",
+        "address": "2-3-1, Yoyogi, Shibuya 151-0053 Tokyo Prefecture",
+        "price_level": "$$$",
+        "rating": 4.3,
+        "reviews": [
+          "This is the 3rd time we have stayed in this hotel when we visited Tokyo. The reason is because of its location.",
+          "Had a double bed standard room and it was just me. Pretty spacious for a Japanese hotel."
+        ],
+        "photos": [
+          "https://media-cdn.tripadvisor.com/media/photo-m/1280/2f/8a/8d/32/caption.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-m/1280/2f/a7/bc/33/caption.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-m/1280/2f/a7/bb/b2/caption.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Hotel_Review-g14133713-d320581-Reviews-Hotel_Sunroute_Plaza_Shinjuku-Yoyogi_Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+        "lat": 35.687218,
+        "lon": 139.69914,
+        "evidence_score": 0.92,
+        "source_id": "tripadvisor",
+        "notes": "Chic hotel with on-site restaurant and bar for solo socializing; concierge and high-speed Wi-Fi; secure business district location near transport; comfortable for short stays.",
+        "area": "Yoyogi, Shinjuku",
+        "price_night": 98,
+        "cancel_policy": "Free cancellation up to 24 hours before check-in"
+      }
+    ],
+    "activities": [
+      {
+        "id": "320447",
+        "name": "Private Guided Tour of Senso-ji Temple and Gardens",
+        "address": "2-3-1, Asakusa, Taito 111-0032 Tokyo Prefecture",
+        "price_level": "$$$",
+        "rating": 4.4,
+        "reviews": [
+          "We had a Private tour with Yo-yo who shared many important information about the site but also about Japanese history in perfect English and with humour",
+          "A MUST-see if you go to Tokyo. So very cool!"
+        ],
+        "photos": [
+          "https://media-cdn.tripadvisor.com/media/photo-m/1280/1a/3d/a5/07/caption.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/07/ba/11/67/photo0jpg.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Attraction_Review-g14134311-d320447-Reviews-Senso_ji_Temple-Asakusa_Taito_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+        "lat": 35.7147,
+        "lon": 139.79678,
+        "evidence_score": 0.95,
+        "source_id": "tripadvisor",
+        "notes": "Private tour available, highlights autumn foliage in nearby gardens, suitable for solo travelers seeking self-discovery",
+        "open_time": "09:00",
+        "close_time": "17:00",
+        "duration_min": 180,
+        "price": 50,
+        "tags": [
+          "cultural",
+          "temple",
+          "guided",
+          "solo",
+          "autumn"
+        ]
+      },
+      {
+        "id": "17853643",
+        "name": "Kimono Tea Ceremony Maikoya Tokyo",
+        "address": "2-19-15 9F, Shinjuku 160-0021 Tokyo Prefecture",
+        "price_level": "$$",
+        "rating": 4.8,
+        "reviews": [
+          "Ideal for wearing kimono during traditional tea ceremony",
+          "Authentic experience in traditional setting"
+        ],
+        "photos": [
+          "https://media-cdn.tripadvisor.com/media/photo-o/19/56/db/1f/tea-ceremony-tokyo-shinjuku.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/19/56/42/70/tea-ceremony-tokyo-traditional.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Attraction_Review-g1066457-d17853643-Reviews-Kimono_Tea_Ceremony_Maikoya_Tokyo-Shinjuku_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+        "lat": 35.698128,
+        "lon": 139.70503,
+        "evidence_score": 0.9,
+        "source_id": "tripadvisor",
+        "notes": "Premium workshop for solo travelers, includes kimono rental, opportunities for interaction with hosts",
+        "open_time": "10:00",
+        "close_time": "18:00",
+        "duration_min": 90,
+        "price": 30,
+        "tags": [
+          "cultural",
+          "workshop",
+          "tea-ceremony",
+          "social",
+          "solo"
+        ]
+      },
+      {
+        "id": "19274143",
+        "name": "Shibuya Sky Observation Deck",
+        "address": "2-24-12 Shibuya, Shibuya 150-0002 Tokyo Prefecture",
+        "price_level": "$$",
+        "rating": 4.4,
+        "reviews": [
+          "Shibuya sky is a wonderful roof top view of Tokyo with many wonderful viewing points",
+          "Great views, but fairly crowded"
+        ],
+        "photos": [
+          "https://media-cdn.tripadvisor.com/media/photo-m/1280/28/46/f3/2c/instagram-now-grubbin.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-w/31/70/73/c6/caption.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Attraction_Review-g1066456-d19274143-Reviews-Shibuya_Sky-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+        "lat": 35.658318,
+        "lon": 139.70222,
+        "evidence_score": 0.95,
+        "source_id": "tripadvisor",
+        "notes": "Premium rooftop with 360-degree views, ideal for autumn cityscapes, book in advance for solo visit",
+        "open_time": "09:00",
+        "close_time": "23:00",
+        "duration_min": 60,
+        "price": 18,
+        "tags": [
+          "observation",
+          "scenic",
+          "autumn",
+          "social",
+          "solo"
+        ]
+      }
+    ],
+    "food": [
+      {
+        "id": "4418384",
+        "name": "Sushi Yoshitake",
+        "address": "7-8-13 Brown Place 9F, Ginza, Chuo 104-0061 Tokyo Prefecture",
+        "price_level": "$$$$",
+        "rating": 4.7,
+        "reviews": [
+          "I never thought I’d say this but this was the best Sushi meal that I’ve ever had. Chef Yoshitake San was in his element.",
+          "Is it good ? Yes it is the products are super fresh. Nicely presented with some innovation.",
+          "3 michelin star 10 seater counter sushi place that needs a reservation. Some of my favorites here include Uni from Miyagi prefecture."
+        ],
+        "photos": [
+          "https://media-cdn.tripadvisor.com/media/photo-o/0d/b6/8f/32/photo6jpg.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/0e/69/93/52/photo0jpg.jpg",
+          "https://media-cdn.tripadvisor.com/media/photo-o/04/a6/05/e1/entrance-sign.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Restaurant_Review-g14129573-d4418384-Reviews-Sushi_Yoshitake-Ginza_Chuo_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+        "lat": 35.66855,
+        "lon": 139.7609,
+        "evidence_score": 0.95,
+        "source_id": "tripadvisor",
+        "notes": "3 Michelin stars, intimate counter seating for 8, ideal for solo diners to engage with chef and others, omakase menu around 40,000 JPY (approx 270 USD), book in advance, atmospheric and high-quality experience",
+        "open_time": "18:00",
+        "close_time": "22:00",
+        "tags": [
+          "japanese",
+          "sushi",
+          "omakase",
+          "michelin",
+          "fine-dining",
+          "counter-seating",
+          "solo-friendly"
+        ]
+      },
+      {
+        "id": "sushi_sho",
+        "name": "Sushi Sho",
+        "address": "1-11-8 Tomigaya, Shibuya-ku, Tokyo 151-0063",
+        "price_level": "$$$$",
+        "rating": 4.8,
+        "reviews": [
+          "Exceptional omakase with innovative techniques, counter seating allows interaction with the chef.",
+          "Michelin-starred sushi experience perfect for solo travelers, fresh seasonal fish.",
+          "Intimate setting with only 8 seats, great atmosphere for socializing subtly."
+        ],
+        "photos": [
+          "https://example.com/sushisho1.jpg",
+          "https://example.com/sushisho2.jpg",
+          "https://example.com/sushisho3.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Restaurant_Review-g1066456-d1234567-Reviews-Sushi_Sho-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html",
+        "lat": 35.6695,
+        "lon": 139.6917,
+        "evidence_score": 0.92,
+        "source_id": "tripadvisor",
+        "notes": "1 Michelin star, Edomae-style sushi with counter for 8, welcoming to individuals, menu approx 30,000 JPY (200 USD), focuses on seasonal ingredients, reservations essential",
+        "open_time": "18:00",
+        "close_time": "21:00",
+        "tags": [
+          "japanese",
+          "sushi",
+          "omakase",
+          "michelin",
+          "fine-dining",
+          "counter-seating",
+          "solo-friendly"
+        ]
+      },
+      {
+        "id": "sushi_tokami",
+        "name": "Sushi Tokami",
+        "address": "1-9-6 Nishishinbashi, Minato-ku, Tokyo 105-0003",
+        "price_level": "$$$$",
+        "rating": 4.6,
+        "reviews": [
+          "Outstanding kaiseki-inspired omakase, counter seating fosters a social yet intimate vibe.",
+          "Michelin-recommended, perfect for solo diners interested in authentic Japanese cuisine.",
+          "High-quality service and atmosphere, uni and tuna highlights."
+        ],
+        "photos": [
+          "https://example.com/sushitokami1.jpg",
+          "https://example.com/sushitokami2.jpg",
+          "https://example.com/sushitokami3.jpg"
+        ],
+        "url": "https://www.tripadvisor.com/Restaurant_Review-g1066443-d7654321-Reviews-Sushi_Tokami-Minato_Tokyo_Tokyo_Prefecture_Kanto.html",
+        "lat": 35.6742,
+        "lon": 139.7536,
+        "evidence_score": 0.9,
+        "source_id": "tripadvisor",
+        "notes": "1 Michelin star, blends sushi and kaiseki elements, counter seating for socialization, lunch sets around 15,000 JPY (100 USD) to fit budget, dinner higher, atmospheric venue welcoming solos",
+        "open_time": "12:00",
+        "close_time": "22:00",
+        "tags": [
+          "japanese",
+          "sushi",
+          "kaiseki",
+          "omakase",
+          "michelin",
+          "fine-dining",
+          "counter-seating",
+          "solo-friendly"
+        ]
+      }
+    ],
+    "intercity_transport": [
+      {
+        "name": "Premium Economy Flight Seoul to Tokyo with Air Premia",
+        "fare_class": "PREMIUM_ECONOMY",
+        "refundable": false,
+        "url": "https://www.airpremia.com/en/flights/seoul-tokyo",
+        "price": 291.4,
+        "transfer": [
+          {
+            "name": "Air Premia YP731",
+            "place": "Seoul ICN → Tokyo NRT",
+            "departure_time": "08:45",
+            "arrival_time": "11:20",
+            "duration_min": 155
+          },
+          {
+            "name": "Air Premia YP732",
+            "place": "Tokyo NRT → Seoul ICN",
+            "departure_time": "12:30",
+            "arrival_time": "15:15",
+            "duration_min": 165
+          }
+        ],
+        "total_duration_min": 320,
+        "note": "Direct roundtrip flights in premium economy, includes 1 checked bag and 2 carry-ons, enhanced seating and service for comfort on short trip"
+      },
+      {
+        "name": "Economy Direct Flight with Jeju Air",
+        "fare_class": "ECONOMY",
+        "refundable": false,
+        "url": "https://www.jejuair.net/jejuair/ko/main.do",
+        "price": 128.2,
+        "transfer": [
+          {
+            "name": "Jeju Air 7C1101",
+            "place": "Seoul ICN → Tokyo NRT",
+            "departure_time": "08:30",
+            "arrival_time": "11:00",
+            "duration_min": 150
+          },
+          {
+            "name": "Jeju Air 7C1122",
+            "place": "Tokyo NRT → Seoul ICN",
+            "departure_time": "19:25",
+            "arrival_time": "22:00",
+            "duration_min": 155
+          }
+        ],
+        "total_duration_min": 305,
+        "note": "Direct roundtrip economy flights, includes 15kg checked baggage, reliable low-cost carrier with convenient timing for solo traveler"
+      },
+      {
+        "name": "Economy Direct Flight with T'way Air",
+        "fare_class": "ECONOMY",
+        "refundable": false,
+        "url": "https://www.twayair.com/main",
+        "price": 139,
+        "transfer": [
+          {
+            "name": "T'way Air TW241",
+            "place": "Seoul ICN → Tokyo NRT",
+            "departure_time": "08:35",
+            "arrival_time": "11:05",
+            "duration_min": 150
+          },
+          {
+            "name": "T'way Air TW242",
+            "place": "Tokyo NRT → Seoul ICN",
+            "departure_time": "12:05",
+            "arrival_time": "14:55",
+            "duration_min": 170
+          }
+        ],
+        "total_duration_min": 320,
+        "note": "Direct roundtrip economy flights, includes carry-on baggage, efficient schedules maximizing time in Tokyo for 3-day trip"
+      }
+    ],
+    "recommendations": {
+      "safety_level": "very_safe",
+      "safety_notes": [
+        "Tokyo is one of the safest cities in the world for solo travelers, with very low crime rates",
+        "Exercise normal precautions; be aware of pickpocketing in crowded areas like Shibuya",
+        "Japan is prone to natural disasters such as earthquakes and typhoons; download emergency apps",
+        "Public transport is reliable and safe even at night",
+        "Solo travelers, especially women, report feeling secure walking alone"
+      ],
+      "travel_advisories": [
+        "Level 1: Exercise normal precautions (U.S. State Department, May 2025)",
+        "No specific warnings for Tokyo; general caution for natural disasters"
+      ],
+      "visa_requirements": {
+        "South Korea": "90-day visa-free entry for tourism"
+      },
+      "cultural_considerations": [
+        "Respect local customs by bowing when greeting instead of handshaking",
+        "Remove shoes when entering homes, ryokans, or some restaurants",
+        "Be quiet on public transportation and avoid loud conversations",
+        "No public displays of affection; keep interactions polite and reserved"
+      ],
+      "dress_code_recommendations": [
+        "Modest clothing for visiting temples and shrines (cover shoulders and knees)",
+        "Comfortable walking shoes for extensive sightseeing",
+        "Business casual for upscale dining or events"
+      ],
+      "local_customs": [
+        "Slurping noodles is acceptable and shows appreciation for the food",
+        "Avoid pointing with your index finger; use an open hand instead",
+        "Say 'itadakimasu' before meals and 'gochisousama deshita' after to show gratitude",
+        "Gift-giving is common; present and receive items with both hands"
+      ],
+      "language_barriers": [
+        "English is limited outside tourist areas; learn basic Japanese phrases like 'arigatou' (thank you)",
+        "Use translation apps like Google Translate for menus and directions",
+        "Many signs and train announcements are in English in Tokyo",
+        "As a Korean speaker, note that Hangul is sometimes used, but Japanese is primary"
+      ],
+      "child_friendly_rating": 5,
+      "infant_considerations": [
+        "Excellent facilities in stations and stores, though not applicable for solo adult travel",
+        "Clean and safe environment overall"
+      ],
+      "elderly_accessibility": [
+        "Good accessibility in Tokyo with elevators, ramps, and priority seating on trains",
+        "Many attractions offer wheelchair access and senior discounts"
+      ],
+      "weather_conditions": "Mild autumn weather, temperatures 15-22°C (59-72°F)",
+      "seasonal_considerations": [
+        "October brings comfortable weather but possible rain and typhoons; pack layers and rain gear",
+        "Autumn foliage starts; fewer crowds than peak seasons",
+        "Check for typhoon updates as October is tail end of season"
+      ],
+      "best_time_to_visit": "March-May for cherry blossoms or October-November for autumn colors",
+      "currency_info": "Japanese Yen (JPY); approximate exchange rate 150 JPY to 1 USD (as of 2025)",
+      "payment_methods": [
+        "Cash is king for small purchases and rural areas; ATMs available at 7-Eleven",
+        "Credit cards accepted in major hotels, restaurants, and shops",
+        "Use IC cards like Suica or Pasmo for seamless public transport and convenience stores"
+      ],
+      "religious_restrictions": [
+        "Predominantly Shinto and Buddhist; show respect at shrines by purifying hands at temizuya",
+        "No strict dress codes but modest attire appreciated; avoid entering inner sanctums",
+        "Quiet and calm behavior expected at religious sites"
+      ],
+      "dietary_restrictions_support": {
+        "vegetarian": true,
+        "vegan": true,
+        "gluten_free": true,
+        "halal": true,
+        "kosher": false
+      }
+    },
+    "final_plan": null,
+    "interrupt": {
+      "task": "Make your selections for the following options",
+      "selections": [
+        {
+          "type": "lodging",
+          "task": "Choose lodging option",
+          "options": [
+            {
+              "id": "1083444",
+              "name": "Sakura Hotel Hatagaya",
+              "address": "1-32-3 Hatagaya, Shibuya 151-0072 Tokyo Prefecture",
+              "price_level": "$$",
+              "rating": 3.9,
+              "reviews": [
+                "The staff were all really friendly and helpful. The restaurant / bar has an eclectic selection of international dishes and beers.",
+                "This hotel was in a SUPER cute residential area. It is also literally a 2-minute walk from the nearest metro station."
+              ],
+              "photos": [
+                "https://media-cdn.tripadvisor.com/media/photo-m/1280/19/a8/45/b4/sakura-hotel-hatagaya.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/11/3b/3f/5d/sakura-hotel-hatagatya.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/11/3b/3e/ff/sakura-cafe.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Hotel_Review-g1066456-d1083444-Reviews-Sakura_Hotel_Hatagaya-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+              "lat": 35.676163,
+              "lon": 139.6767,
+              "evidence_score": 0.9,
+              "source_id": "tripadvisor",
+              "notes": "Muslim-friendly with prayer room and cafe/bar for social interactions, ideal for solo travelers; high-speed Wi-Fi available; safe residential area near transport.",
+              "area": "Hatagaya, Shibuya",
+              "price_night": 85,
+              "cancel_policy": "Free cancellation up to 24 hours before check-in"
+            },
+            {
+              "id": "13917393",
+              "name": "Himalaya Cloud Hotel",
+              "address": "2-30-2 Hatagaya, Shibuya 151-0072 Tokyo Prefecture",
+              "price_level": "$$",
+              "rating": 4.7,
+              "reviews": [
+                "My adult daughter and I are staying here for four nights while in Tokyo. The room is spacious and perfectly clean.",
+                "The room is 27 sq.m big. I love it so much. Stuff was nice and friendly."
+              ],
+              "photos": [
+                "https://media-cdn.tripadvisor.com/media/photo-o/2a/c8/39/f2/caption.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/13/a9/48/62/caption.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-w/2a/c8/3a/33/caption.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Hotel_Review-g1066456-d13917393-Reviews-Himalaya_Cloud_Hotel-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+              "lat": 35.675926,
+              "lon": 139.67143,
+              "evidence_score": 0.95,
+              "source_id": "tripadvisor",
+              "notes": "Boutique hotel with rooftop garden for relaxation and social lounging; spacious rooms for solo comfort; secure location near Shinjuku; concierge services available.",
+              "area": "Hatagaya, Shibuya",
+              "price_night": 90,
+              "cancel_policy": "Free cancellation up to 24 hours before check-in"
+            },
+            {
+              "id": "1083446",
+              "name": "SHIBUYA HOTEL EN",
+              "address": "1-1 Maruyamacho, Shibuya 150-0044 Tokyo Prefecture",
+              "price_level": "$$$",
+              "rating": 4,
+              "reviews": [
+                "Fantastic location, so close to everything. 5 minute walk to Shibuya station.",
+                "The hotel structure itself is fine. Great location in Shibuya - one can walk to everything."
+              ],
+              "photos": [
+                "https://media-cdn.tripadvisor.com/media/photo-o/0b/42/56/63/oriental-room--v11975194.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/0e/6c/1e/77/caption.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/0e/6c/1e/c5/shibuya-hotel-en.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Hotel_Review-g1066456-d1083446-Reviews-SHIBUYA_HOTEL_EN-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+              "lat": 35.659836,
+              "lon": 139.6954,
+              "evidence_score": 0.88,
+              "source_id": "tripadvisor",
+              "notes": "Upscale boutique with 24-hour security and concierge; social areas and bars nearby; high-speed Wi-Fi; central safe location perfect for solo upscale stay.",
+              "area": "Maruyamacho, Shibuya",
+              "price_night": 95,
+              "cancel_policy": "Free cancellation up to 24 hours before check-in"
+            },
+            {
+              "id": "320581",
+              "name": "Hotel Sunroute Plaza Shinjuku",
+              "address": "2-3-1, Yoyogi, Shibuya 151-0053 Tokyo Prefecture",
+              "price_level": "$$$",
+              "rating": 4.3,
+              "reviews": [
+                "This is the 3rd time we have stayed in this hotel when we visited Tokyo. The reason is because of its location.",
+                "Had a double bed standard room and it was just me. Pretty spacious for a Japanese hotel."
+              ],
+              "photos": [
+                "https://media-cdn.tripadvisor.com/media/photo-m/1280/2f/8a/8d/32/caption.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-m/1280/2f/a7/bc/33/caption.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-m/1280/2f/a7/bb/b2/caption.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Hotel_Review-g14133713-d320581-Reviews-Hotel_Sunroute_Plaza_Shinjuku-Yoyogi_Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+              "lat": 35.687218,
+              "lon": 139.69914,
+              "evidence_score": 0.92,
+              "source_id": "tripadvisor",
+              "notes": "Chic hotel with on-site restaurant and bar for solo socializing; concierge and high-speed Wi-Fi; secure business district location near transport; comfortable for short stays.",
+              "area": "Yoyogi, Shinjuku",
+              "price_night": 98,
+              "cancel_policy": "Free cancellation up to 24 hours before check-in"
+            }
+          ]
+        },
+        {
+          "type": "intercity_transport",
+          "task": "Choose intercity_transport option",
+          "options": [
+            {
+              "name": "Premium Economy Flight Seoul to Tokyo with Air Premia",
+              "fare_class": "PREMIUM_ECONOMY",
+              "refundable": false,
+              "url": "https://www.airpremia.com/en/flights/seoul-tokyo",
+              "price": 291.4,
+              "transfer": [
+                {
+                  "name": "Air Premia YP731",
+                  "place": "Seoul ICN → Tokyo NRT",
+                  "departure_time": "08:45",
+                  "arrival_time": "11:20",
+                  "duration_min": 155
+                },
+                {
+                  "name": "Air Premia YP732",
+                  "place": "Tokyo NRT → Seoul ICN",
+                  "departure_time": "12:30",
+                  "arrival_time": "15:15",
+                  "duration_min": 165
+                }
+              ],
+              "total_duration_min": 320,
+              "note": "Direct roundtrip flights in premium economy, includes 1 checked bag and 2 carry-ons, enhanced seating and service for comfort on short trip"
+            },
+            {
+              "name": "Economy Direct Flight with Jeju Air",
+              "fare_class": "ECONOMY",
+              "refundable": false,
+              "url": "https://www.jejuair.net/jejuair/ko/main.do",
+              "price": 128.2,
+              "transfer": [
+                {
+                  "name": "Jeju Air 7C1101",
+                  "place": "Seoul ICN → Tokyo NRT",
+                  "departure_time": "08:30",
+                  "arrival_time": "11:00",
+                  "duration_min": 150
+                },
+                {
+                  "name": "Jeju Air 7C1122",
+                  "place": "Tokyo NRT → Seoul ICN",
+                  "departure_time": "19:25",
+                  "arrival_time": "22:00",
+                  "duration_min": 155
+                }
+              ],
+              "total_duration_min": 305,
+              "note": "Direct roundtrip economy flights, includes 15kg checked baggage, reliable low-cost carrier with convenient timing for solo traveler"
+            },
+            {
+              "name": "Economy Direct Flight with T'way Air",
+              "fare_class": "ECONOMY",
+              "refundable": false,
+              "url": "https://www.twayair.com/main",
+              "price": 139,
+              "transfer": [
+                {
+                  "name": "T'way Air TW241",
+                  "place": "Seoul ICN → Tokyo NRT",
+                  "departure_time": "08:35",
+                  "arrival_time": "11:05",
+                  "duration_min": 150
+                },
+                {
+                  "name": "T'way Air TW242",
+                  "place": "Tokyo NRT → Seoul ICN",
+                  "departure_time": "12:05",
+                  "arrival_time": "14:55",
+                  "duration_min": 170
+                }
+              ],
+              "total_duration_min": 320,
+              "note": "Direct roundtrip economy flights, includes carry-on baggage, efficient schedules maximizing time in Tokyo for 3-day trip"
+            }
+          ]
+        },
+        {
+          "type": "activities",
+          "task": "Choose activity option",
+          "options": [
+            {
+              "id": "320447",
+              "name": "Private Guided Tour of Senso-ji Temple and Gardens",
+              "address": "2-3-1, Asakusa, Taito 111-0032 Tokyo Prefecture",
+              "price_level": "$$$",
+              "rating": 4.4,
+              "reviews": [
+                "We had a Private tour with Yo-yo who shared many important information about the site but also about Japanese history in perfect English and with humour",
+                "A MUST-see if you go to Tokyo. So very cool!"
+              ],
+              "photos": [
+                "https://media-cdn.tripadvisor.com/media/photo-m/1280/1a/3d/a5/07/caption.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/07/ba/11/67/photo0jpg.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Attraction_Review-g14134311-d320447-Reviews-Senso_ji_Temple-Asakusa_Taito_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+              "lat": 35.7147,
+              "lon": 139.79678,
+              "evidence_score": 0.95,
+              "source_id": "tripadvisor",
+              "notes": "Private tour available, highlights autumn foliage in nearby gardens, suitable for solo travelers seeking self-discovery",
+              "open_time": "09:00",
+              "close_time": "17:00",
+              "duration_min": 180,
+              "price": 50,
+              "tags": [
+                "cultural",
+                "temple",
+                "guided",
+                "solo",
+                "autumn"
+              ]
+            },
+            {
+              "id": "17853643",
+              "name": "Kimono Tea Ceremony Maikoya Tokyo",
+              "address": "2-19-15 9F, Shinjuku 160-0021 Tokyo Prefecture",
+              "price_level": "$$",
+              "rating": 4.8,
+              "reviews": [
+                "Ideal for wearing kimono during traditional tea ceremony",
+                "Authentic experience in traditional setting"
+              ],
+              "photos": [
+                "https://media-cdn.tripadvisor.com/media/photo-o/19/56/db/1f/tea-ceremony-tokyo-shinjuku.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/19/56/42/70/tea-ceremony-tokyo-traditional.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Attraction_Review-g1066457-d17853643-Reviews-Kimono_Tea_Ceremony_Maikoya_Tokyo-Shinjuku_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+              "lat": 35.698128,
+              "lon": 139.70503,
+              "evidence_score": 0.9,
+              "source_id": "tripadvisor",
+              "notes": "Premium workshop for solo travelers, includes kimono rental, opportunities for interaction with hosts",
+              "open_time": "10:00",
+              "close_time": "18:00",
+              "duration_min": 90,
+              "price": 30,
+              "tags": [
+                "cultural",
+                "workshop",
+                "tea-ceremony",
+                "social",
+                "solo"
+              ]
+            },
+            {
+              "id": "19274143",
+              "name": "Shibuya Sky Observation Deck",
+              "address": "2-24-12 Shibuya, Shibuya 150-0002 Tokyo Prefecture",
+              "price_level": "$$",
+              "rating": 4.4,
+              "reviews": [
+                "Shibuya sky is a wonderful roof top view of Tokyo with many wonderful viewing points",
+                "Great views, but fairly crowded"
+              ],
+              "photos": [
+                "https://media-cdn.tripadvisor.com/media/photo-m/1280/28/46/f3/2c/instagram-now-grubbin.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-w/31/70/73/c6/caption.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Attraction_Review-g1066456-d19274143-Reviews-Shibuya_Sky-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+              "lat": 35.658318,
+              "lon": 139.70222,
+              "evidence_score": 0.95,
+              "source_id": "tripadvisor",
+              "notes": "Premium rooftop with 360-degree views, ideal for autumn cityscapes, book in advance for solo visit",
+              "open_time": "09:00",
+              "close_time": "23:00",
+              "duration_min": 60,
+              "price": 18,
+              "tags": [
+                "observation",
+                "scenic",
+                "autumn",
+                "social",
+                "solo"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "food",
+          "task": "Choose food option",
+          "options": [
+            {
+              "id": "4418384",
+              "name": "Sushi Yoshitake",
+              "address": "7-8-13 Brown Place 9F, Ginza, Chuo 104-0061 Tokyo Prefecture",
+              "price_level": "$$$$",
+              "rating": 4.7,
+              "reviews": [
+                "I never thought I’d say this but this was the best Sushi meal that I’ve ever had. Chef Yoshitake San was in his element.",
+                "Is it good ? Yes it is the products are super fresh. Nicely presented with some innovation.",
+                "3 michelin star 10 seater counter sushi place that needs a reservation. Some of my favorites here include Uni from Miyagi prefecture."
+              ],
+              "photos": [
+                "https://media-cdn.tripadvisor.com/media/photo-o/0d/b6/8f/32/photo6jpg.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/0e/69/93/52/photo0jpg.jpg",
+                "https://media-cdn.tripadvisor.com/media/photo-o/04/a6/05/e1/entrance-sign.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Restaurant_Review-g14129573-d4418384-Reviews-Sushi_Yoshitake-Ginza_Chuo_Tokyo_Tokyo_Prefecture_Kanto.html?m=66827",
+              "lat": 35.66855,
+              "lon": 139.7609,
+              "evidence_score": 0.95,
+              "source_id": "tripadvisor",
+              "notes": "3 Michelin stars, intimate counter seating for 8, ideal for solo diners to engage with chef and others, omakase menu around 40,000 JPY (approx 270 USD), book in advance, atmospheric and high-quality experience",
+              "open_time": "18:00",
+              "close_time": "22:00",
+              "tags": [
+                "japanese",
+                "sushi",
+                "omakase",
+                "michelin",
+                "fine-dining",
+                "counter-seating",
+                "solo-friendly"
+              ]
+            },
+            {
+              "id": "sushi_sho",
+              "name": "Sushi Sho",
+              "address": "1-11-8 Tomigaya, Shibuya-ku, Tokyo 151-0063",
+              "price_level": "$$$$",
+              "rating": 4.8,
+              "reviews": [
+                "Exceptional omakase with innovative techniques, counter seating allows interaction with the chef.",
+                "Michelin-starred sushi experience perfect for solo travelers, fresh seasonal fish.",
+                "Intimate setting with only 8 seats, great atmosphere for socializing subtly."
+              ],
+              "photos": [
+                "https://example.com/sushisho1.jpg",
+                "https://example.com/sushisho2.jpg",
+                "https://example.com/sushisho3.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Restaurant_Review-g1066456-d1234567-Reviews-Sushi_Sho-Shibuya_Tokyo_Tokyo_Prefecture_Kanto.html",
+              "lat": 35.6695,
+              "lon": 139.6917,
+              "evidence_score": 0.92,
+              "source_id": "tripadvisor",
+              "notes": "1 Michelin star, Edomae-style sushi with counter for 8, welcoming to individuals, menu approx 30,000 JPY (200 USD), focuses on seasonal ingredients, reservations essential",
+              "open_time": "18:00",
+              "close_time": "21:00",
+              "tags": [
+                "japanese",
+                "sushi",
+                "omakase",
+                "michelin",
+                "fine-dining",
+                "counter-seating",
+                "solo-friendly"
+              ]
+            },
+            {
+              "id": "sushi_tokami",
+              "name": "Sushi Tokami",
+              "address": "1-9-6 Nishishinbashi, Minato-ku, Tokyo 105-0003",
+              "price_level": "$$$$",
+              "rating": 4.6,
+              "reviews": [
+                "Outstanding kaiseki-inspired omakase, counter seating fosters a social yet intimate vibe.",
+                "Michelin-recommended, perfect for solo diners interested in authentic Japanese cuisine.",
+                "High-quality service and atmosphere, uni and tuna highlights."
+              ],
+              "photos": [
+                "https://example.com/sushitokami1.jpg",
+                "https://example.com/sushitokami2.jpg",
+                "https://example.com/sushitokami3.jpg"
+              ],
+              "url": "https://www.tripadvisor.com/Restaurant_Review-g1066443-d7654321-Reviews-Sushi_Tokami-Minato_Tokyo_Tokyo_Prefecture_Kanto.html",
+              "lat": 35.6742,
+              "lon": 139.7536,
+              "evidence_score": 0.9,
+              "source_id": "tripadvisor",
+              "notes": "1 Michelin star, blends sushi and kaiseki elements, counter seating for socialization, lunch sets around 15,000 JPY (100 USD) to fit budget, dinner higher, atmospheric venue welcoming solos",
+              "open_time": "12:00",
+              "close_time": "22:00",
+              "tags": [
+                "japanese",
+                "sushi",
+                "kaiseki",
+                "omakase",
+                "michelin",
+                "fine-dining",
+                "counter-seating",
+                "solo-friendly"
+              ]
+            }
+          ]
+        }
+      ],
+      "research_plan": {
+        "lodging_candidates": {
+          "name": "Upscale Solo Traveler Accommodations in Tokyo",
+          "description": "Luxury hotels and boutique properties in safe, central locations like Shibuya or Shinjuku, prioritizing security features, social lounges or bars for solo travelers, amenities like high-speed Wi-Fi and concierge services, within 200 USD budget for 3 nights, focusing on comfort and convenience for a short upscale stay",
+          "candidates_number": 4
+        },
+        "activities_candidates": {
+          "name": "Premium Social and Cultural Experiences in Tokyo",
+          "description": "High-end activities suitable for solo travelers, including private guided tours of temples and gardens, premium cultural workshops like tea ceremonies, social events such as upscale izakaya nights or observation deck visits, seasonal autumn highlights, within 150 USD budget, emphasizing self-discovery and social interaction opportunities for a 3-day upscale trip",
+          "candidates_number": 4
+        },
+        "food_candidates": {
+          "name": "Upscale Social Dining Options in Tokyo",
+          "description": "Fine dining restaurants and unique culinary experiences featuring Japanese specialties like kaiseki or sushi omakase, with counter seating or communal tables for solo diners to socialize, including some Michelin-recommended spots, within 200 USD budget for 3 days, focusing on high-quality, atmospheric venues that welcome individuals",
+          "candidates_number": 3
+        },
+        "intercity_transport_candidates": {
+          "name": "Premium Transport to Tokyo",
+          "description": "Upscale intercity options such as business class international flights or first-class Shinkansen tickets, prioritizing comfort, direct routes, and convenience for a solo traveler, within 300 USD budget, considering travel time efficiency for a short 3-day trip",
+          "candidates_number": 3
+        }
+      }
+    }
+  }
+  

@@ -132,7 +132,20 @@ async def start_planning(payload: PlanRequest) -> PlanningResponse:
     
 @app.post("/plan/extra_research", response_model=PlanningResponse)
 async def extra_research(payload: ExtraResearchRequest) -> PlanningResponse:
-    """Perform extra research for the trip planning workflow."""
+    """Run additional research passes for an in-flight planning workflow.
+
+    Args:
+        payload: Carries the persisted workflow config alongside the research
+            plan that specifies which agents need to investigate more options.
+
+    Returns:
+        PlanningResponse describing the refreshed workflow status together with
+        any newly gathered candidate options or interrupts.
+
+    Raises:
+        HTTPException: Emits 400 errors for invalid follow-up requests and 500
+            errors when the underlying workflow encounters unexpected failures.
+    """
     logger.info("Extra research request received")
     logger.debug("Payload: {payload}", payload=payload)
 
@@ -156,7 +169,20 @@ async def extra_research(payload: ExtraResearchRequest) -> PlanningResponse:
 
 @app.post("/plan/final_plan", response_model=PlanningResponse)
 async def final_plan(payload: FinalPlanRequest) -> PlanningResponse:
-    """Generate the final plan for the trip planning workflow."""
+    """Synthesize the final itinerary once user selections are complete.
+
+    Args:
+        payload: Contains the workflow configuration along with the user's
+            selected research candidates that should appear in the itinerary.
+
+    Returns:
+        PlanningResponse with the finished plan, including daily breakdowns and
+        any remaining interrupts if the workflow requires human follow-up.
+
+    Raises:
+        HTTPException: Propagates a 500 error when the LangGraph planner fails
+            to produce a final itinerary.
+    """
     logger.info("Final plan request received")
     logger.debug("Payload: {payload}", payload=payload)
     
@@ -179,7 +205,14 @@ async def final_plan(payload: FinalPlanRequest) -> PlanningResponse:
 
 @app.post("/plan/cleanup_threads", response_model=int)
 async def cleanup_threads() -> int:
-    """Cleanup old threads from the workflow."""
+    """Purge expired workflow threads to reclaim bundle resources.
+
+    Returns:
+        Number of thread contexts removed during the cleanup procedure.
+
+    Raises:
+        HTTPException: 500-level error when thread eviction fails unexpectedly.
+    """
     logger.info("Cleanup threads request received")
     bundle = get_workflow_bundle()
     try:
@@ -191,18 +224,18 @@ async def cleanup_threads() -> int:
 
 @app.get("/sentry-debug")
 async def trigger_error():
+    """Raise a runtime error to exercise Sentry monitoring pipelines."""
     raise RuntimeError("This is a test error")
 
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
-    """Simple health endpoint used for readiness probes."""
-
+    """Report a lightweight readiness signal for deployment orchestrators."""
     return {"status": "healthy", "service": "trip-planner-api"}
 
 
 @app.get("/workflow/info")
 async def get_workflow_info() -> Dict[str, Any]:
-    """Get detailed information about the workflow configuration."""
+    """Expose live workflow configuration details for observability tooling."""
     bundle = get_workflow_bundle()
     
     return {

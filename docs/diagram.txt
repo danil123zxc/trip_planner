@@ -1,0 +1,86 @@
+TRIP PLANNER SYSTEM OVERVIEW
+============================
+
+┌───────────────────────────────────────────────────────────────┐
+│                           CLIENT                              │
+├───────────────────────────────────────────────────────────────┤
+│ React Frontend (SelectionInterface.tsx)                       │
+│ • Collects PlanRequest data                                   │
+│ • Displays research candidates                                │
+│ • Submits selections / extra research                         │
+└───────────────┬───────────────────────────────────────────────┘
+                │ HTTPS (JSON)
+                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                        FASTAPI LAYER                          │
+├───────────────────────────────────────────────────────────────┤
+│ src/api/app.py                                                │
+│ • /plan/start /plan/extra_research /plan/final_plan           │
+│ • /plan/cleanup_threads /workflow/info                        │
+│ • Request validation & response shaping                       │
+│ • Sentry, CORS, logging                                       │
+└───────────────┬───────────────────────────────────────────────┘
+                │ instantiates
+                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                   WORKFLOW BUNDLE (Python)                    │
+├───────────────────────────────────────────────────────────────┤
+│ src/api/workflow_service.WorkflowBundle                       │
+│ • Ensures ApiSettings & tracing                               │
+│ • Builds retrieval pipeline                                   │
+│ • Creates research agents (LangChain REACT)                   │
+│ • Compiles LangGraph StateGraph                               │
+│ • Stores thread state / interrupts                            │
+└───────────────┬───────────────────────────────────────────────┘
+                │ executes
+                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                       LANGGRAPH WORKFLOW                      │
+├───────────────────────────────────────────────────────────────┤
+│ Nodes (src/core/nodes.py)                                     │
+│   budget_estimate → research_plan                             │
+│   ├─ research_lodging                                         │
+│   ├─ research_activities                                      │
+│   ├─ research_food                                            │
+│   ├─ research_intercity_transport                             │
+│   └─ research_recommendations                                 │
+│   ↓                                                           │
+│   combined_human_review  (interrupt)                          │
+│   ↓                                                           │
+│   planner → FinalPlan                                         │
+└───────────────┬───────────────────────────────────────────────┘
+                │ invokes
+                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                     RESEARCH AGENTS & TOOLS                   │
+├───────────────────────────────────────────────────────────────┤
+│ LangChain `create_react_agent` instances                      │
+│ • TripAdvisor comprehensive search tool                       │
+│ • Amadeus flight search tool                                  │
+│ • Retrieval pipeline `search_db` tool                         │
+│ • Reddit insights tool                                        │
+│ • Tavily web search tool                                      │
+└───────────────┬───────────────────────────────────────────────┘
+                │ outbound API calls / vector queries
+                ▼
+┌───────────────────────┐  ┌───────────────────────┐  ┌─────────┐
+│ TripAdvisor Services  │  │ Amadeus Flight Data   │  │  Tavily │
+│ src/services/trip_... │  │ src/services/amadeus  │  │ Search  │
+└───────────────────────┘  └───────────────────────┘  └─────────┘
+┌───────────────────────┐  ┌───────────────────────┐
+│ Reddit Client / Tool  │  │ Geocoding (Nominatim) │
+│ src/services/reddit   │  │ src/services/geocoding│
+└───────────────────────┘  └───────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│ Retrieval Pipeline (`src/pipelines/rag.py`)                    │
+│ • OpenAI embeddings → FAISS vector store                       │
+│ • Reranking & scoring                                          │
+└───────────────────────────────────────────────────────────────┘
+
+THREAD LIFECYCLE
+----------------
+1. /plan/start launches new thread (config + state stored in WorkflowBundle).
+2. Combined human review interrupt returns candidate payload to frontend.
+3. User submits selections via /plan/final_plan or requests /plan/extra_research.
+4. Workflow resumes, planner node produces FinalPlan, response sent to client.
+5. Idle threads removed via /plan/cleanup_threads (default 60 min TTL).

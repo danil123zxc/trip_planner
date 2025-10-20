@@ -1,0 +1,23 @@
+{
+  "travellers": [
+    {
+      "name": "danil",
+      "date_of_birth": "2002-10-20",
+      "spoken_languages": [
+        "korean"
+      ],
+      "interests": [
+        "sports"
+      ],
+      "nationality": "korean"
+    }
+  ],
+  "budget": 1000,
+  "currency": "USD",
+  "current_location": "seoul",
+  "destination": "tokyo",
+  "destination_country": "japan",
+  "date_from": "2025-10-21",
+  "date_to": "2025-10-23",
+  "group_type": "alone"
+}
